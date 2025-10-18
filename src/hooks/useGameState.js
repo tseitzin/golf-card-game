@@ -137,10 +137,11 @@ export function useGameState(config = {}) {
     if (faceDownCount === 1) {
       setTurnComplete(prev => prev.map((v, i) => (i === currentPlayer ? true : v)))
       setMustFlipAfterDiscard(prev => prev.map((v, i) => (i === currentPlayer ? false : v)))
-      setFirstTurnDraw(prev => prev.map((v, i) => (i === currentPlayer ? false : v)))
+      // Keep firstTurnDraw true for computer to avoid second draw in same turn
+      setFirstTurnDraw(prev => prev.map((v, i) => (i === currentPlayer ? (currentPlayer === 1 ? true : false) : v)))
     } else {
       setMustFlipAfterDiscard(prev => prev.map((v, i) => (i === currentPlayer ? true : v)))
-      setFirstTurnDraw(prev => prev.map((v, i) => (i === currentPlayer ? false : v)))
+      setFirstTurnDraw(prev => prev.map((v, i) => (i === currentPlayer ? (currentPlayer === 1 ? true : false) : v)))
     }
   }, [currentPlayer, drawnCard, players, turnComplete])
 
@@ -174,7 +175,8 @@ export function useGameState(config = {}) {
         setDiscardTop(discarded)
       }
       setDrawnCard(null)
-      setFirstTurnDraw(prev => prev.map((v, i) => (i === currentPlayer ? false : v)))
+      // Preserve firstTurnDraw for computer to block extra draw attempt
+      setFirstTurnDraw(prev => prev.map((v, i) => (i === currentPlayer ? (currentPlayer === 1 ? true : false) : v)))
       setMustFlipAfterDiscard(prev => prev.map((v, i) => (i === currentPlayer ? false : v)))
       setTurnComplete(prev => prev.map((v, i) => (i === currentPlayer ? true : v)))
     },
@@ -530,16 +532,28 @@ export function useGameState(config = {}) {
 
   const startNextHole = useCallback(() => {
     if (currentHole >= 9) return
-    // Build new deck and redeal
     const newDeck = buildDeck()
+    // Deal fresh hands
     const newPlayers = [
       { cards: newDeck.slice(0, 8).map(c => ({ ...c, faceUp: false })), flippedCount: 0 },
       { cards: newDeck.slice(8, 16).map(c => ({ ...c, faceUp: false })), flippedCount: 0 },
     ]
     setPlayers(newPlayers)
-    setDeckRest(newDeck.slice(16))
+    // Remaining deck (we will seed discard from here)
+    const remainder = newDeck.slice(16)
+    // Seed discard pile immediately so there is visible game state (like initial setup)
+    if (remainder.length > 0) {
+      const [top, ...rest] = remainder
+      const seed = { ...top, faceUp: true }
+      setDeckRest(rest)
+      setDiscardTop(seed)
+      setDiscardPile([seed])
+    } else {
+      setDeckRest(remainder)
+      setDiscardTop(null)
+      setDiscardPile([])
+    }
     setDrawnCard(null)
-    setDiscardPile([])
     setInitialFlips([false, false])
     setFirstTurnDraw([false, false])
     setTurnComplete([false, false])
@@ -547,27 +561,64 @@ export function useGameState(config = {}) {
     setRoundOver(false)
     window._finalTurn = false
     setCurrentHole(h => h + 1)
-    // Synchronously auto flip two computer cards like initial setup
-    setPlayers(prev =>
-      prev.map((p, i) => {
-        if (i !== 1) return p
-        let hiddenIdxs = p.cards.map((c, ci) => ci).filter(ci => !p.cards[ci].faceUp)
-        const toFlip = []
-        for (let f = 0; f < 2 && hiddenIdxs.length > 0; f++) {
-          const pick = hiddenIdxs.splice(Math.floor(Math.random() * hiddenIdxs.length), 1)[0]
-          toFlip.push(pick)
-        }
-        return {
-          ...p,
-          cards: p.cards.map((c, ci) => (toFlip.includes(ci) ? { ...c, faceUp: true } : c)),
-          flippedCount: p.flippedCount + toFlip.length,
-        }
-      }),
-    )
-    setInitialFlips([false, true])
-  }, [])
+    // Auto flip two random computer cards (player index 1)
+    setPlayers(prev => prev.map((p, i) => {
+      if (i !== 1) return p
+      let hiddenIdxs = p.cards.map((c, ci) => ci).filter(ci => !p.cards[ci].faceUp)
+      const toFlip = []
+      for (let f = 0; f < 2 && hiddenIdxs.length > 0; f++) {
+        const pick = hiddenIdxs.splice(Math.floor(Math.random() * hiddenIdxs.length), 1)[0]
+        toFlip.push(pick)
+      }
+      return {
+        ...p,
+        cards: p.cards.map((c, ci) => (toFlip.includes(ci) ? { ...c, faceUp: true } : c)),
+        flippedCount: p.flippedCount + toFlip.length,
+      }
+    }))
+    setInitialFlips([false, true]) // Mark computer's initial flips complete
+    // If it's currently computer's turn, proactively trigger its logic so user sees immediate action.
+    setTimeout(() => {
+      if (currentPlayer === 1 && !disableComputerAuto) {
+        computerTurn()
+      }
+    }, 0)
+  }, [currentHole, currentPlayer, computerTurn, disableComputerAuto])
 
+  // Running totals including any bonuses that are already guaranteed (i.e., fully revealed matched columns groups).
   const visibleScores = players.map(p => calculateVisibleScore(p.cards))
+  const runningTotalsWithBonus = players.map(p => {
+    // Build a face-up-only view; treat hidden cards as unknown (exclude them from raw sum except for potential canceled pairs that are both face up)
+    const cards = p.cards
+    let raw = 0
+    const matchedColumnsByValue = {}
+    let minusFiveCount = 0
+    for (const c of cards) if (c.faceUp && c.value === -5) minusFiveCount++
+    for (let col = 0; col < COLUMN_COUNT; col++) {
+      const top = cards[col]
+      const bottom = cards[col + COLUMN_COUNT]
+      const bothUp = top.faceUp && bottom.faceUp
+      if (bothUp && top.value === bottom.value && top.value !== -5) {
+        matchedColumnsByValue[top.value] = (matchedColumnsByValue[top.value] || 0) + 1
+        continue
+      }
+      if (bothUp && top.value === bottom.value && top.value === -5) {
+        raw += -10
+        continue
+      }
+      if (top.faceUp) raw += top.value
+      if (bottom.faceUp) raw += bottom.value
+    }
+    const groupSizes = Object.values(matchedColumnsByValue)
+    const largestGroup = groupSizes.length ? Math.max(...groupSizes) : 0
+    let bonus = 0
+    if (largestGroup === 2) bonus -= 10
+    else if (largestGroup === 3) bonus -= 15
+    else if (largestGroup === 4) bonus -= 20
+    // Hole-in-one full set bonus only applies if all four -5 are faceUp already
+    if (minusFiveCount === 4) bonus -= 10
+    return raw + bonus
+  })
 
   const testHelpers = exposeTestHelpers
     ? {
@@ -707,6 +758,7 @@ export function useGameState(config = {}) {
     handleCardClick,
     canInteractWithCard,
     visibleScores,
+    runningTotalsWithBonus,
     clearSavedGame,
     ...testHelpers,
   }

@@ -486,6 +486,58 @@ describe('useGameState', () => {
     }
   })
 
+  it('runningTotalsWithBonus includes -10 bonus for two revealed matched columns', () => {
+    const deck = createTestDeck()
+    const { result } = renderHook(() => useGameState({ disableDelays: true, initialDeck: deck, enablePersistence: false, exposeTestHelpers: true }))
+    act(() => {
+      result.current.handleSetupSubmit(mockEvent())
+      // Force two matched columns (values 5) and reveal them; other cards faceUp with distinct higher values.
+      result.current.__setPlayers(ps => ps.map((p,i) => i!==0 ? p : {
+        ...p,
+        cards: p.cards.map((c,ci) => {
+          if (ci===0) return { ...c, value:5, faceUp:true }
+          if (ci===4) return { ...c, value:5, faceUp:true }
+          if (ci===1) return { ...c, value:5, faceUp:true }
+          if (ci===5) return { ...c, value:5, faceUp:true }
+          // Remaining distinct
+          if (ci===2) return { ...c, value:8, faceUp:true }
+          if (ci===6) return { ...c, value:7, faceUp:true }
+          if (ci===3) return { ...c, value:6, faceUp:true }
+          if (ci===7) return { ...c, value:9, faceUp:true }
+          return c
+        }),
+        flippedCount:8,
+      }))
+    })
+    // raw without bonus: matched columns canceled (0), others: 8+7+6+9 = 30; bonus -10 => 20
+    expect(result.current.runningTotalsWithBonus[0]).toBe(20)
+  })
+
+  it('computer acts (draws or picks discard) on first turn of hole 2', async () => {
+    const deck = createTestDeck()
+    const { result } = renderHook(() => useGameState({ disableDelays: true, initialDeck: deck, enablePersistence: false, exposeTestHelpers: true }))
+    act(() => {
+      result.current.handleSetupSubmit(mockEvent())
+      // Finish hole 1 quickly: flip all computer cards then set roundOver
+      result.current.__setPlayers(ps => ps.map((p,i) => i!==1 ? p : { ...p, cards: p.cards.map(c => ({ ...c, faceUp:true })), flippedCount:8 }))
+      result.current.setRoundOver(true)
+    })
+    // Allow score finalize
+    act(() => {})
+    act(() => {
+      result.current.startNextHole()
+      result.current.setCurrentPlayer(1)
+    })
+    // After starting next hole, computer should have initialFlips[1] true and attempt a draw within a couple cycles
+    expect(result.current.initialFlips[1]).toBe(true)
+    for (let i=0;i<6;i++) {
+      await act(async () => { await Promise.resolve() })
+    }
+    // Either drew a card or picked up discard; discard pile might be empty early; check firstTurnDraw or drawnCard
+    const acted = result.current.drawnCard !== null || result.current.firstTurnDraw[1]
+    expect(acted).toBe(true)
+  })
+
   it('persists and reloads game state (holeScores & currentHole)', () => {
     const deck = createTestDeck()
     const key = 'testGamePersist:v1'

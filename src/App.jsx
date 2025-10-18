@@ -33,6 +33,7 @@ export default function App() {
     handleCardClick,
     canInteractWithCard,
     visibleScores,
+    runningTotalsWithBonus,
     clearSavedGame,
   } = useGameState()
 
@@ -93,7 +94,7 @@ export default function App() {
                   player={players[idx]}
                   name={playerNames[idx]}
                   color={playerSetup[idx].color}
-                  runningTotal={visibleScores[idx]}
+                  runningTotal={runningTotalsWithBonus ? runningTotalsWithBonus[idx] : visibleScores[idx]}
                   canInteractWithCard={canInteractWithCard}
                   onCardClick={handleCardClick}
                 />
