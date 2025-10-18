@@ -1,3 +1,6 @@
+import Card from './Card.jsx'
+import { useRef, useEffect } from 'react'
+
 export default function PlayerBoard({
   index,
   player,
@@ -7,6 +10,12 @@ export default function PlayerBoard({
   canInteractWithCard,
   onCardClick,
 }) {
+  // Track previous faceUp states to apply small stagger only to the two most recently flipped cards at start.
+  const prevFaceUpRef = useRef([])
+  useEffect(() => {
+    prevFaceUpRef.current = player?.cards?.map(c => c.faceUp) || []
+  }, [player])
+
   return (
     <div>
       <div
@@ -44,28 +53,25 @@ export default function PlayerBoard({
       >
         {(player?.cards || Array(8).fill(null)).map((card, idxCard) => {
           const isInteractive = card ? canInteractWithCard(index, idxCard) : false
+          // Flip stagger: if this is computer (index 1) and card just transitioned to faceUp while previous was false
+          let flipDelay = 0
+          const prev = prevFaceUpRef.current[idxCard]
+          if (index === 1 && card?.faceUp && prev === false) {
+            // Stagger based on how many other newly flipped in this pass (simple idx weighting)
+            flipDelay = (idxCard % 4) * 40
+          }
           return (
-            <div
+            <Card
               key={card ? card.id : idxCard}
-              style={{
-                width: '60px',
-                height: '90px',
-                background: card?.faceUp ? '#eee' : '#333',
-                color: card?.faceUp ? '#222' : '#eee',
-                border: '1px solid #333',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '24px',
-                cursor: isInteractive ? 'pointer' : 'default',
-              }}
+              card={card}
+              interactive={isInteractive}
               onClick={() => onCardClick?.(index, idxCard)}
-            >
-              {card?.faceUp ? card.value : '?'}
-            </div>
+              flipDelay={flipDelay}
+            />
           )
         })}
       </div>
     </div>
   )
 }
+

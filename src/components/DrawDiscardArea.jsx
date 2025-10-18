@@ -8,6 +8,15 @@ export default function DrawDiscardArea({
   onPickUp,
   onDiscard,
 }) {
+  const drawPileClasses = [
+    'card-transition-base',
+    canDraw && !drawnCard ? 'draw-pile-ready' : null,
+    drawnCard ? 'drawn-card-anim' : null,
+  ].filter(Boolean).join(' ')
+  const discardClasses = [
+    'card-transition-base',
+    canPickUp ? 'discard-pickup-anim' : null,
+  ].filter(Boolean).join(' ')
   return (
     <div style={{ display: 'flex', gap: '24px', marginBottom: '40px', justifyContent: 'center' }}>
       <div
@@ -26,6 +35,7 @@ export default function DrawDiscardArea({
           fontSize: '20px',
           cursor: canDraw ? 'pointer' : 'not-allowed',
         }}
+        className={drawPileClasses}
       >
         {drawnCard ? drawnCard.value : '?'}
       </div>
@@ -45,6 +55,7 @@ export default function DrawDiscardArea({
           fontSize: '20px',
           cursor: canPickUp ? 'pointer' : 'not-allowed',
         }}
+        className={discardClasses}
       >
           {discardTop ? discardTop.value : '-'}
       </div>

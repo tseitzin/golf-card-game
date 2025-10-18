@@ -40,3 +40,52 @@
 .read-the-docs {
   color: #888;
 }
+
+/* Draw / Discard animations */
+@keyframes drawPulse {
+  0% { box-shadow: 0 0 0 0 rgba(255,214,0,0.6); }
+  70% { box-shadow: 0 0 0 12px rgba(255,214,0,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,214,0,0); }
+}
+
+@keyframes liftUp {
+  0% { transform: translateY(0) scale(1); }
+  40% { transform: translateY(-14px) scale(1.05); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+@keyframes slideInDrawn {
+  0% { transform: translateY(-20px) scale(0.6); opacity: 0; }
+  60% { transform: translateY(6px) scale(1.05); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes pulseFinalTurn {
+  0% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.05); filter: brightness(1.15); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulseFinalTurn { animation: none !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .draw-pile-ready, .drawn-card-anim, .discard-pickup-anim { animation: none !important; transition: none !important; }
+}
+
+.draw-pile-ready {
+  animation: drawPulse 2.2s ease-in-out infinite;
+}
+
+.drawn-card-anim {
+  animation: slideInDrawn 280ms cubic-bezier(.22,.61,.36,1) both;
+}
+
+.discard-pickup-anim {
+  animation: liftUp 380ms cubic-bezier(.22,.61,.36,1) both;
+}
+
+.card-transition-base {
+  transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
+}

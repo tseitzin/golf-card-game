@@ -48,6 +48,7 @@ export function useGameState(config = {}) {
     persistenceKey = 'golfGameState:v1',
     disableComputerAuto = false,
     enableSkipHeuristic = false,
+    aiSpeed = 'normal', // 'slow' | 'normal' | 'fast'
   } = config
 
   const deck = useMemo(() => {
@@ -116,6 +117,7 @@ export function useGameState(config = {}) {
   const drawCard = useCallback(() => {
     // Prevent drawing before setup is complete (initial simultaneous flips & discard seed must occur first)
     if (!setupComplete) return
+    if (roundOver) return
     // Require player to have completed their two initial flips.
     if (!initialFlips[currentPlayer]) return
     if (drawnCard || deckRest.length === 0) return
@@ -125,9 +127,10 @@ export function useGameState(config = {}) {
     setDrawnCard(top)
     setDeckRest(rest)
     setFirstTurnDraw(prev => prev.map((v, i) => (i === currentPlayer ? true : v)))
-  }, [currentPlayer, deckRest, drawnCard, firstTurnDraw, turnComplete, setupComplete, initialFlips])
+  }, [currentPlayer, deckRest, drawnCard, firstTurnDraw, turnComplete, setupComplete, initialFlips, roundOver])
 
   const discardDrawnCard = useCallback(() => {
+    if (roundOver) return
     if (!drawnCard || turnComplete[currentPlayer]) return
     const toDiscard = { ...drawnCard, faceUp: true }
     setDiscardPile(prev => [toDiscard, ...prev])
@@ -143,19 +146,21 @@ export function useGameState(config = {}) {
       setMustFlipAfterDiscard(prev => prev.map((v, i) => (i === currentPlayer ? true : v)))
       setFirstTurnDraw(prev => prev.map((v, i) => (i === currentPlayer ? (currentPlayer === 1 ? true : false) : v)))
     }
-  }, [currentPlayer, drawnCard, players, turnComplete])
+  }, [currentPlayer, drawnCard, players, turnComplete, roundOver])
 
   const pickUpDiscard = useCallback(() => {
+    if (roundOver) return
     if (drawnCard || discardPile.length === 0 || turnComplete[currentPlayer]) return
     const top = discardPile[0]
     setDrawnCard({ ...top, faceUp: true })
     setDiscardPile(prev => prev.slice(1))
     setDiscardTop(prev => (discardPile.length > 1 ? discardPile[1] : null))
     setMustFlipAfterDiscard(prev => prev.map((v, i) => (i === currentPlayer ? false : v)))
-  }, [currentPlayer, discardPile, drawnCard, turnComplete])
+  }, [currentPlayer, discardPile, drawnCard, turnComplete, roundOver])
 
   const replaceCard = useCallback(
     idx => {
+      if (roundOver) return
       if (!drawnCard || turnComplete[currentPlayer]) return
       // Capture current card to be replaced from players state directly
       const currentCard = players[currentPlayer].cards[idx]
@@ -180,11 +185,12 @@ export function useGameState(config = {}) {
       setMustFlipAfterDiscard(prev => prev.map((v, i) => (i === currentPlayer ? false : v)))
       setTurnComplete(prev => prev.map((v, i) => (i === currentPlayer ? true : v)))
     },
-    [currentPlayer, drawnCard, turnComplete, players],
+    [currentPlayer, drawnCard, turnComplete, players, roundOver],
   )
 
   const handleCardClick = useCallback(
     (playerIndex, cardIndex) => {
+      if (roundOver) return
       if (currentPlayer !== playerIndex) return
       const player = players[playerIndex]
       const card = player.cards[cardIndex]
@@ -228,7 +234,7 @@ export function useGameState(config = {}) {
         replaceCard(cardIndex)
       }
     },
-    [currentPlayer, drawnCard, initialFlips, mustFlipAfterDiscard, players, replaceCard, turnComplete],
+    [currentPlayer, drawnCard, initialFlips, mustFlipAfterDiscard, players, replaceCard, turnComplete, roundOver],
   )
 
   const canInteractWithCard = useCallback(
@@ -249,6 +255,10 @@ export function useGameState(config = {}) {
     setTurnComplete(tc => tc.map((val, i) => (i === currentPlayer ? false : val)))
     setFirstTurnDraw(arr => arr.map((v, i) => (i === currentPlayer ? false : v)))
     setMustFlipAfterDiscard(arr => arr.map((v, i) => (i === currentPlayer ? false : v)))
+    // If we just switched into the final turn player, clear pending so round can conclude after they act.
+    if (typeof window._finalTurn === 'number' && currentPlayer === window._finalTurn) {
+      window._finalTurnPending = false
+    }
   }, [currentPlayer])
 
   // Ensure initialFlips flags remain consistent if flippedCount reaches 2 after setup change sequencing.
@@ -260,7 +270,27 @@ export function useGameState(config = {}) {
     ms => (disableDelays ? Promise.resolve() : new Promise(resolve => setTimeout(resolve, ms))),
     [disableDelays],
   )
-  const stepDelay = stepDelayOverride ?? 1200
+  // Derive a base step delay. Existing default was 1200ms; we slow further for 'slow' mode.
+  const derivedBase = (() => {
+    if (typeof stepDelayOverride === 'number') return stepDelayOverride
+    switch (aiSpeed) {
+      case 'slow': return 2500 // make slow meaningfully slower
+      case 'fast': return 650
+      case 'normal':
+      default: return 1200
+    }
+  })()
+  const stepDelay = derivedBase
+  // Quick micro-delay for short actions (replace/discard/pickup); scale with speed.
+  const quickDelay = (() => {
+    if (typeof stepDelayOverride === 'number') return Math.min(400, Math.max(120, stepDelayOverride / 3))
+    switch (aiSpeed) {
+      case 'slow': return 600
+      case 'fast': return 180
+      case 'normal':
+      default: return 300
+    }
+  })()
 
   const computerTurn = useCallback(async () => {
     if (!setupComplete || currentPlayer !== 1 || roundOver) return
@@ -334,9 +364,9 @@ export function useGameState(config = {}) {
     if (!drawnCard && initialFlips[1] && !turnComplete[1] && discardPile.length > 0) {
       const decision = evaluateDiscard(discardPile[0])
       if (decision) {
-        await delay(250)
+        await delay(quickDelay)
         pickUpDiscard()
-        await delay(250)
+        await delay(quickDelay)
         replaceCard(decision.idx)
         return
       }
@@ -355,10 +385,10 @@ export function useGameState(config = {}) {
       const lastIdx = cards.findIndex(c => !c.faceUp)
       const pairIdx = lastIdx < COLUMN_COUNT ? lastIdx + COLUMN_COUNT : lastIdx - COLUMN_COUNT
       if (cards[pairIdx].faceUp && (drawnCard.value === cards[pairIdx].value || drawnCard.value < cards[pairIdx].value)) {
-        await delay(300)
+        await delay(quickDelay)
         replaceCard(lastIdx)
       } else {
-        await delay(300)
+        await delay(quickDelay)
         discardDrawnCard()
       }
       return
@@ -371,16 +401,16 @@ export function useGameState(config = {}) {
         const a = col
         const b = col + COLUMN_COUNT
         if (cards[a].faceUp && cards[a].value === drawnCard.value && !cards[b].faceUp) {
-          await delay(250); replaceCard(b); return
+          await delay(quickDelay); replaceCard(b); return
         }
         if (cards[b].faceUp && cards[b].value === drawnCard.value && !cards[a].faceUp) {
-          await delay(250); replaceCard(a); return
+          await delay(quickDelay); replaceCard(a); return
         }
       }
       const expectedUnknown = computeExpectedUnknownValue(players, discardPile, drawnCard)
       // 2. High card discard heuristic
       if (drawnCard.value > 9) {
-        await delay(250)
+        await delay(quickDelay)
         discardDrawnCard()
         return
       }
@@ -396,18 +426,18 @@ export function useGameState(config = {}) {
         }
       }
       if (targetIdx !== -1 && drawnCard.value <= 9) {
-        await delay(250); replaceCard(targetIdx); return
+        await delay(quickDelay); replaceCard(targetIdx); return
       }
       // 4. Replace a facedown if drawn is significantly better than expectation
       if (drawnCard.value <= expectedUnknown - 1.5) {
         const hiddenIdx = cards.findIndex(c => !c.faceUp)
-        if (hiddenIdx !== -1) { await delay(250); replaceCard(hiddenIdx); return }
+        if (hiddenIdx !== -1) { await delay(quickDelay); replaceCard(hiddenIdx); return }
       }
       // 5. Reveal info: replace first hidden
       const hiddenIdx = cards.findIndex(c => !c.faceUp)
-      if (hiddenIdx !== -1) { await delay(250); replaceCard(hiddenIdx); return }
+      if (hiddenIdx !== -1) { await delay(quickDelay); replaceCard(hiddenIdx); return }
       // 6. Nothing beneficial -> discard
-      await delay(250); discardDrawnCard(); return
+      await delay(quickDelay); discardDrawnCard(); return
     }
 
     // Must flip after discard (forced reveal)
@@ -427,7 +457,7 @@ export function useGameState(config = {}) {
       }
       if (bestIdx === -1) bestIdx = cards.findIndex(c => !c.faceUp)
       if (bestIdx !== -1) {
-        await delay(250)
+        await delay(quickDelay)
         setPlayers(ps => ps.map((p, pi) => (pi === 1 ? { ...p, cards: p.cards.map((c, j) => (j === bestIdx ? { ...c, faceUp: true } : c)), flippedCount: p.flippedCount + 1 } : p)))
         setMustFlipAfterDiscard(a => a.map((v, i) => (i === 1 ? false : v)))
         setFirstTurnDraw(a => a.map((v, i) => (i === 1 ? false : v)))
@@ -474,7 +504,9 @@ export function useGameState(config = {}) {
       if (playerFlippedAll[currentPlayer]) {
         const other = currentPlayer === 0 ? 1 : 0
         if (players[other].cards.some(c => !c.faceUp)) {
+          // Assign a final turn to the opponent. Mark pending so we don't instantly end if their turnComplete was already true.
           window._finalTurn = other
+          window._finalTurnPending = true
           setCurrentPlayer(other)
           return
         }
@@ -486,10 +518,12 @@ export function useGameState(config = {}) {
         )
         setRoundOver(true)
         window._finalTurn = false
+        window._finalTurnPending = false
         return
       }
     }
-    if (typeof window._finalTurn === 'number' && turnComplete[window._finalTurn]) {
+    // Only conclude round when final turn player has completed AFTER assignment (pending cleared).
+    if (typeof window._finalTurn === 'number' && turnComplete[window._finalTurn] && !window._finalTurnPending) {
       setPlayers(ps =>
         ps.map(p => ({
           ...p,
@@ -498,6 +532,7 @@ export function useGameState(config = {}) {
       )
       setRoundOver(true)
       window._finalTurn = false
+      window._finalTurnPending = false
     }
   }, [currentPlayer, players, roundOver, turnComplete])
 
@@ -560,6 +595,7 @@ export function useGameState(config = {}) {
     setMustFlipAfterDiscard([false, false])
     setRoundOver(false)
     window._finalTurn = false
+    window._finalTurnPending = false
     setCurrentHole(h => h + 1)
     // Auto flip two random computer cards (player index 1)
     setPlayers(prev => prev.map((p, i) => {
@@ -672,6 +708,9 @@ export function useGameState(config = {}) {
       setRoundOver(parsed.roundOver || false)
       setCurrentHole(parsed.currentHole || 1)
       setHoleScores(parsed.holeScores || [])
+      // Clear transient final turn flags on load (they can't be reliably resumed)
+      window._finalTurn = false
+      window._finalTurnPending = false
       // overallTotals derived; ignore persisted overallTotals if present
     } catch (e) {
       console.warn('Failed to load saved game state', e)
