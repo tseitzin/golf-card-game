@@ -6,10 +6,10 @@ import { useEffect, useRef } from 'react'
  *  - card: { id, value, faceUp }
  *  - onClick: handler
  *  - interactive: boolean (adds pointer cursor)
- *  - width / height (defaults 60x90)
+ *  - width / height (defaults 52x78)
  *  - flipDelay: optional ms to delay initial flip animation (used for staggered computer auto-flips)
  */
-export default function Card({ card, onClick, interactive, width = 60, height = 90, flipDelay = 0 }) {
+export default function Card({ card, onClick, interactive, width = 52, height = 78, flipDelay = 0 }) {
   const faceUp = !!card?.faceUp
   const displayValue = faceUp ? card.value : '?'
   const ref = useRef(null)
@@ -56,7 +56,7 @@ export default function Card({ card, onClick, interactive, width = 60, height = 
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: 24,
+          fontSize: 20,
           fontWeight: '600',
           transform: 'rotateY(0deg)',
           transformStyle: 'preserve-3d',
@@ -77,7 +77,7 @@ export default function Card({ card, onClick, interactive, width = 60, height = 
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: 24,
+          fontSize: 20,
           fontWeight: '600',
           transformStyle: 'preserve-3d',
         }}

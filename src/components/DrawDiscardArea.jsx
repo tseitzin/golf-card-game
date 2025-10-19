@@ -18,7 +18,7 @@ export default function DrawDiscardArea({
     canPickUp ? 'discard-pickup-anim' : null,
   ].filter(Boolean).join(' ')
   return (
-    <div style={{ display: 'flex', gap: '24px', marginBottom: '40px', justifyContent: 'center' }}>
+    <div style={{ display: 'flex', gap: '24px', marginBottom: 0, justifyContent: 'center' }}>
       <div
         onClick={canDraw ? onDraw : undefined}
         style={{

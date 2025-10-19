@@ -18,13 +18,20 @@ export default function PlayerBoard({
   }, [player])
 
   return (
-    <div>
+    <div
+      style={{
+        flex: '0 1 220px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 6,
+      }}
+    >
       <div
         style={{
           color: color,
           fontWeight: 'bold',
-          marginBottom: 4,
-          fontSize: 18,
+          fontSize: 16,
           textAlign: 'center',
         }}
       >
@@ -32,10 +39,10 @@ export default function PlayerBoard({
       </div>
       <div
         style={{
-          marginBottom: 6,
-          fontWeight: 'bold',
+          fontWeight: '600',
           color: '#222',
           textAlign: 'center',
+          fontSize: 13,
         }}
       >
         Running Total: {runningTotal}
@@ -43,12 +50,12 @@ export default function PlayerBoard({
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 60px)',
-          gridTemplateRows: 'repeat(2, 90px)',
-          gap: '10px',
+          gridTemplateColumns: 'repeat(4, 52px)',
+          gridTemplateRows: 'repeat(2, 78px)',
+          gap: '8px',
           background: color,
-          borderRadius: 12,
-          padding: 12,
+          borderRadius: 10,
+          padding: 10,
           boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
         }}
       >

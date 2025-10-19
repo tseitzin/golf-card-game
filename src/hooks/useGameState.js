@@ -402,6 +402,7 @@ export function useGameState(config = {}) {
     if (!playerSetup[playerIndex]?.isComputer) return
     const currentState = players[playerIndex]
     if (!currentState) return
+    if (turnComplete[playerIndex]) return
     const cards = currentState.cards
 
     // Initial two flips if not done yet
@@ -486,7 +487,7 @@ export function useGameState(config = {}) {
       }
     }
 
-    if (!firstTurnDraw[playerIndex] && initialFlips[playerIndex] && !drawnCard) {
+    if (!firstTurnDraw[playerIndex] && initialFlips[playerIndex] && !drawnCard && !turnComplete[playerIndex]) {
       await delay(stepDelay)
       drawCard()
       return

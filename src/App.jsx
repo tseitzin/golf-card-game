@@ -51,8 +51,6 @@ export default function App() {
     finalTurnPending,
   } = useGameState({ aiSpeed })
 
-  // Turn advancement now automatic; no manual End Turn handler.
-
   const currentInitialFlips = initialFlips[currentPlayer] ?? false
   const currentTurnComplete = turnComplete[currentPlayer] ?? false
   const currentFirstTurnDraw = firstTurnDraw[currentPlayer] ?? false
@@ -78,46 +76,110 @@ export default function App() {
     return config?.isComputer ? `Computer ${idx + 1}` : `Player ${idx + 1}`
   })
 
+  const renderPlayerArea = () => {
+    if (!players.length) return null
+
+    const topCount = players.length > 3 ? Math.ceil(players.length / 2) : players.length
+    const topPlayers = players.slice(0, topCount)
+    const bottomPlayers = players.slice(topCount)
+
+    const renderRow = (rowPlayers, rowOffset, position) => {
+      if (!rowPlayers.length) return null
+      return (
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '24px',
+            flexWrap: 'wrap',
+            width: '100%',
+            maxWidth: 960,
+            marginBottom: shouldSplit && position === 'top' ? 12 : 0,
+            marginTop: shouldSplit && position === 'bottom' ? 12 : 0,
+          }}
+        >
+          {rowPlayers.map((player, idx) => {
+            const playerIndex = idx + rowOffset
+            return (
+              <PlayerBoard
+                key={playerIndex}
+                index={playerIndex}
+                player={player}
+                name={playerNames[playerIndex]}
+                color={playerSetup[playerIndex]?.color || '#fff'}
+                isComputer={!!playerSetup[playerIndex]?.isComputer}
+                runningTotal={
+                  runningTotalsWithBonus?.[playerIndex] ??
+                  (visibleScores ? visibleScores[playerIndex] : undefined) ??
+                  0
+                }
+                canInteractWithCard={canInteractWithCard}
+                onCardClick={handleCardClick}
+              />
+            )
+          })}
+        </div>
+      )
+    }
+
+    const shouldSplit = bottomPlayers.length > 0
+
+    return (
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 1080,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          minHeight: shouldSplit ? '60vh' : 'auto',
+          padding: '12px 0 40px',
+        }}
+      >
+        {renderRow(topPlayers, 0, 'top')}
+        <div
+          style={{
+            flexGrow: shouldSplit ? 1 : 0,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            width: '100%',
+            padding: shouldSplit ? '0 0 12px' : '12px 0 20px',
+          }}
+        >
+          <DrawDiscardArea
+            drawnCard={drawnCard}
+            discardTop={discardTop}
+            canDraw={canDraw}
+            canPickUp={canPickUp}
+            canDiscard={canDiscard}
+            onDraw={drawCard}
+            onPickUp={pickUpDiscard}
+            onDiscard={discardDrawnCard}
+          />
+        </div>
+        {renderRow(bottomPlayers, topCount, 'bottom')}
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-green-700 to-green-900 p-4">
         {!setupComplete ? (
-          <PlayerSetup
-            playerSetup={playerSetup}
-            playerCount={playerCount}
-            onPlayerCountChange={handlePlayerCountChange}
-            onChange={handleSetupChange}
-            onSubmit={handleSetupSubmit}
-            setupError={setupError}
-          />
+          <>
+            <h1 className="text-white text-4xl font-bold mb-6 text-center tracking-wide">Golf</h1>
+            <PlayerSetup
+              playerSetup={playerSetup}
+              playerCount={playerCount}
+              onPlayerCountChange={handlePlayerCountChange}
+              onChange={handleSetupChange}
+              onSubmit={handleSetupSubmit}
+              setupError={setupError}
+            />
+          </>
         ) : (
           <>
-            <h1 className="text-white text-3xl font-bold mb-6 text-center">Golf</h1>
-            <div style={{ display: 'flex', gap: 16, marginBottom: 12, alignItems: 'center' }}>
-              <label style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>
-                AI Speed:
-                <select
-                  value={aiSpeed}
-                  onChange={e => setAiSpeed(e.target.value)}
-                  style={{
-                    marginLeft: 8,
-                    background: '#14532D',
-                    color: '#FFD600',
-                    border: '1px solid #FFD600',
-                    borderRadius: 6,
-                    padding: '4px 8px',
-                    fontWeight: '600',
-                  }}
-                >
-                  <option value="slow">Slow</option>
-                  <option value="normal">Normal</option>
-                  <option value="fast">Fast</option>
-                </select>
-              </label>
-              <span style={{ color: '#ddd', fontSize: 12, fontStyle: 'italic' }}>
-                (affects computer pacing only)
-              </span>
-            </div>
             <div
               style={{
                 color: currentPlayerConfig.color || '#fff',
@@ -155,43 +217,7 @@ export default function App() {
                 )}
               </div>
             )}
-            <div
-              style={{
-                display: 'flex',
-                gap: '32px',
-                marginBottom: '32px',
-                justifyContent: 'center',
-                flexWrap: 'wrap',
-              }}
-            >
-              {players.map((player, idx) => (
-                <PlayerBoard
-                  key={idx}
-                  index={idx}
-                  player={player}
-                  name={playerNames[idx]}
-                  color={playerSetup[idx]?.color || '#fff'}
-                  isComputer={!!playerSetup[idx]?.isComputer}
-                  runningTotal={
-                    runningTotalsWithBonus?.[idx] ??
-                    (visibleScores ? visibleScores[idx] : undefined) ??
-                    0
-                  }
-                  canInteractWithCard={canInteractWithCard}
-                  onCardClick={handleCardClick}
-                />
-              ))}
-            </div>
-            <DrawDiscardArea
-              drawnCard={drawnCard}
-              discardTop={discardTop}
-              canDraw={canDraw}
-              canPickUp={canPickUp}
-              canDiscard={canDiscard}
-              onDraw={drawCard}
-              onPickUp={pickUpDiscard}
-              onDiscard={discardDrawnCard}
-            />
+            {renderPlayerArea()}
             <ActionBar
               onEndRound={() => setRoundOver(true)}
               onReset={() => window.location.reload()}
@@ -206,6 +232,39 @@ export default function App() {
               currentHole={currentHole}
               playerNames={playerNames}
             />
+            <div
+              style={{
+                display: 'flex',
+                gap: 16,
+                marginTop: 18,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <label style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>
+                AI Speed:
+                <select
+                  value={aiSpeed}
+                  onChange={e => setAiSpeed(e.target.value)}
+                  style={{
+                    marginLeft: 8,
+                    background: '#14532D',
+                    color: '#FFD600',
+                    border: '1px solid #FFD600',
+                    borderRadius: 6,
+                    padding: '4px 8px',
+                    fontWeight: '600',
+                  }}
+                >
+                  <option value="slow">Slow</option>
+                  <option value="normal">Normal</option>
+                  <option value="fast">Fast</option>
+                </select>
+              </label>
+              <span style={{ color: '#ddd', fontSize: 12, fontStyle: 'italic' }}>
+                (affects computer pacing only)
+              </span>
+            </div>
           </>
         )}
       </div>
