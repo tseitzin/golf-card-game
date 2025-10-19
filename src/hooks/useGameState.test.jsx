@@ -1,6 +1,7 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useGameState } from './useGameState.js'
+import { finishPlayer } from '../test/gameTestHelpers.js'
 
 const mockEvent = () => ({ preventDefault: vi.fn() })
 
@@ -131,25 +132,36 @@ describe('useGameState', () => {
       useGameState({ disableDelays: true, initialDeck: deck, exposeTestHelpers: true, enablePersistence: false }),
     )
 
-    act(() => {
-      result.current.__setPlayers(ps =>
-        ps.map((p, i) =>
-          i === 0
-            ? {
-                ...p,
-                cards: p.cards.map(c => ({ ...c, faceUp: true })),
-              }
-            : p,
-        ),
-      )
-    })
+    act(() => { finishPlayer(result, 0) })
 
     await act(async () => {
       await Promise.resolve()
     })
 
-    expect(window._finalTurn).toBe(1)
+    expect(result.current.finalTurnPlayer).toBe(1)
     expect(result.current.currentPlayer).toBe(1)
+    expect(result.current.roundOver).toBe(false)
+  })
+
+  it('clears finalTurnPending immediately when switching to the final turn player', async () => {
+    const deck = createTestDeck()
+    const { result } = renderHook(() =>
+      useGameState({ disableDelays: true, initialDeck: deck, exposeTestHelpers: true, enablePersistence: false }),
+    )
+    // Scenario: Player 0 finishes; player 1 still has hidden cards. Should assign finalTurnPlayer=1 and currentPlayer=1.
+    act(() => {
+      result.current.__setPlayers(ps => ps.map((p,i) => i!==0 ? p : {
+        ...p,
+        cards: p.cards.map(c => ({ ...c, faceUp:true })),
+        flippedCount: 8,
+      }))
+    })
+    await act(async () => { await Promise.resolve() })
+    // After effect runs, finalTurnPlayer should be 1 and pending initially true until turn switch effect clears it.
+    expect(result.current.finalTurnPlayer).toBe(1)
+    // currentPlayer should have been switched to 1; pending should now be false due to effect clearing when entering that turn.
+    expect(result.current.currentPlayer).toBe(1)
+    expect(result.current.finalTurnPending).toBe(false)
     expect(result.current.roundOver).toBe(false)
   })
 
@@ -161,7 +173,7 @@ describe('useGameState', () => {
 
     act(() => {
       result.current.handleSetupSubmit(mockEvent())
-      window._finalTurn = 1
+      finishPlayer(result, 0)
       result.current.__setTurnComplete(tc => tc.map((val, i) => (i === 1 ? true : val)))
     })
 
@@ -170,8 +182,32 @@ describe('useGameState', () => {
     })
 
     expect(result.current.roundOver).toBe(true)
-    expect(window._finalTurn).toBe(false)
+    expect(result.current.finalTurnPlayer).toBe(null)
     expect(result.current.players.every(p => p.cards.every(c => c.faceUp))).toBe(true)
+  })
+
+  it('grants human a final turn when computer reveals all cards first', async () => {
+    const deck = createTestDeck()
+    const { result } = renderHook(() =>
+      useGameState({ disableDelays: true, initialDeck: deck, exposeTestHelpers: true, enablePersistence: false }),
+    )
+    // Setup complete
+    act(() => { result.current.handleSetupSubmit(mockEvent()) })
+    // Force computer (player 1) to have all cards face up while human still has hidden cards.
+    act(() => { finishPlayer(result, 1) })
+    await act(async () => { await Promise.resolve() })
+    // Expect final turn assigned to human (player 0)
+    expect(result.current.finalTurnPlayer).toBe(0)
+    expect(result.current.currentPlayer).toBe(0)
+    expect(result.current.roundOver).toBe(false)
+    // Complete human turn to end round: flip remaining human cards
+    act(() => {
+      finishPlayer(result, 0)
+      result.current.__setTurnComplete(tc => tc.map((v,i) => i===0 ? true : v))
+    })
+    await act(async () => { await Promise.resolve() })
+    expect(result.current.roundOver).toBe(true)
+    expect(result.current.finalTurnPlayer).toBe(null)
   })
   it('seeds discard pile and auto-flips two computer cards only on setup submit', () => {
     const deck = createTestDeck()
@@ -262,8 +298,8 @@ describe('useGameState', () => {
     const { result } = renderHook(() => useGameState({ disableDelays: true, initialDeck: deck, exposeTestHelpers: true, enablePersistence: false, disableComputerAuto: true }))
     act(() => {
       result.current.handleSetupSubmit(mockEvent())
-      // End hole 1 quickly: flip all player 0 cards, then all player 1 cards
-      result.current.__setPlayers(ps => ps.map(p => ({ ...p, cards: p.cards.map(c => ({ ...c, faceUp: true })), flippedCount: 8 })))
+      finishPlayer(result, 0)
+      finishPlayer(result, 1)
       result.current.setRoundOver(true)
     })
     // Start next hole
@@ -518,8 +554,7 @@ describe('useGameState', () => {
     const { result } = renderHook(() => useGameState({ disableDelays: true, initialDeck: deck, enablePersistence: false, exposeTestHelpers: true }))
     act(() => {
       result.current.handleSetupSubmit(mockEvent())
-      // Finish hole 1 quickly: flip all computer cards then set roundOver
-      result.current.__setPlayers(ps => ps.map((p,i) => i!==1 ? p : { ...p, cards: p.cards.map(c => ({ ...c, faceUp:true })), flippedCount:8 }))
+      finishPlayer(result, 1)
       result.current.setRoundOver(true)
     })
     // Allow score finalize
@@ -547,7 +582,8 @@ describe('useGameState', () => {
     )
     act(() => {
       r1.current.handleSetupSubmit(mockEvent())
-      r1.current.__setPlayers(ps => ps.map(p => ({ ...p, cards: p.cards.map(c => ({ ...c, faceUp: true })) })))
+      finishPlayer({ current: r1.current }, 0)
+      finishPlayer({ current: r1.current }, 1)
       r1.current.setRoundOver(true)
     })
     expect(r1.current.holeScores.length).toBe(1)

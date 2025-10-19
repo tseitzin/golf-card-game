@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { calculateVisibleScore, calculateScore, explainScore } from '../utils/score'
 
 const DECK_COPY_COUNT = 8
@@ -78,6 +78,10 @@ export function useGameState(config = {}) {
   const [roundOver, setRoundOver] = useState(false)
   const [currentHole, setCurrentHole] = useState(1) // 1..9
   const [holeScores, setHoleScores] = useState([]) // array of { hole, scores: [p0, p1] }
+  // Track previous all-face-up state to detect the exact moment a player finishes.
+  const prevAllFaceUpRef = useRef([false, false])
+  const [finalTurnPlayer, setFinalTurnPlayer] = useState(null)
+  const [finalTurnPending, setFinalTurnPending] = useState(false)
 
   const handleSetupChange = useCallback((idx, field, value) => {
     setPlayerSetup(prev => prev.map((p, i) => (i === idx ? { ...p, [field]: value } : p)))
@@ -255,11 +259,11 @@ export function useGameState(config = {}) {
     setTurnComplete(tc => tc.map((val, i) => (i === currentPlayer ? false : val)))
     setFirstTurnDraw(arr => arr.map((v, i) => (i === currentPlayer ? false : v)))
     setMustFlipAfterDiscard(arr => arr.map((v, i) => (i === currentPlayer ? false : v)))
-    // If we just switched into the final turn player, clear pending so round can conclude after they act.
-    if (typeof window._finalTurn === 'number' && currentPlayer === window._finalTurn) {
-      window._finalTurnPending = false
+    // If we just switched into the final turn player's turn, clear pending so round can conclude after they act.
+    if (finalTurnPlayer !== null && currentPlayer === finalTurnPlayer) {
+      setFinalTurnPending(false)
     }
-  }, [currentPlayer])
+  }, [currentPlayer, finalTurnPlayer])
 
   // Ensure initialFlips flags remain consistent if flippedCount reaches 2 after setup change sequencing.
   useEffect(() => {
@@ -500,30 +504,35 @@ export function useGameState(config = {}) {
   useEffect(() => {
     if (roundOver) return
     const playerFlippedAll = players.map(p => p.cards.every(c => c.faceUp))
-    if (!window._finalTurn && (playerFlippedAll[0] || playerFlippedAll[1])) {
-      if (playerFlippedAll[currentPlayer]) {
-        const other = currentPlayer === 0 ? 1 : 0
+    const prev = prevAllFaceUpRef.current
+    // Detect newly completed players irrespective of currentPlayer to avoid race.
+    for (let i = 0; i < playerFlippedAll.length; i++) {
+      if (!prev[i] && playerFlippedAll[i]) {
+        const other = i === 0 ? 1 : 0
         if (players[other].cards.some(c => !c.faceUp)) {
-          // Assign a final turn to the opponent. Mark pending so we don't instantly end if their turnComplete was already true.
-          window._finalTurn = other
-          window._finalTurnPending = true
-          setCurrentPlayer(other)
-          return
+          // Opponent still has hidden cards -> grant them a final turn if not already set.
+          if (finalTurnPlayer === null) {
+            setFinalTurnPlayer(other)
+            setFinalTurnPending(true)
+            if (currentPlayer !== other) setCurrentPlayer(other)
+          }
+        } else {
+          // Opponent already fully revealed (or simultaneous finish) -> finalize immediately.
+          setPlayers(ps =>
+            ps.map(p => ({
+              ...p,
+              cards: p.cards.map(c => (c.faceUp ? c : { ...c, faceUp: true })),
+            })),
+          )
+          setRoundOver(true)
+          setFinalTurnPlayer(null)
+          setFinalTurnPending(false)
         }
-        setPlayers(ps =>
-          ps.map(p => ({
-            ...p,
-            cards: p.cards.map(c => (c.faceUp ? c : { ...c, faceUp: true })),
-          })),
-        )
-        setRoundOver(true)
-        window._finalTurn = false
-        window._finalTurnPending = false
-        return
       }
     }
-    // Only conclude round when final turn player has completed AFTER assignment (pending cleared).
-    if (typeof window._finalTurn === 'number' && turnComplete[window._finalTurn] && !window._finalTurnPending) {
+    prevAllFaceUpRef.current = playerFlippedAll
+    // Conclude round after final turn player completes (pending cleared) by flipping any remaining hidden cards.
+    if (finalTurnPlayer !== null && turnComplete[finalTurnPlayer] && !finalTurnPending) {
       setPlayers(ps =>
         ps.map(p => ({
           ...p,
@@ -531,22 +540,22 @@ export function useGameState(config = {}) {
         })),
       )
       setRoundOver(true)
-      window._finalTurn = false
-      window._finalTurnPending = false
+      setFinalTurnPlayer(null)
+      setFinalTurnPending(false)
     }
-  }, [currentPlayer, players, roundOver, turnComplete])
+  }, [players, roundOver, turnComplete, currentPlayer, finalTurnPlayer, finalTurnPending])
 
   // Auto-advance turn when a player's turn completes and not in final turn resolution.
   useEffect(() => {
     if (roundOver) return
     // Skip auto-advance if final turn indicator is active
-    if (typeof window._finalTurn === 'number') return
+    if (finalTurnPlayer !== null) return
     // If current player's turnComplete is true, advance to next.
     if (turnComplete[currentPlayer]) {
       const next = (currentPlayer + 1) % players.length
       setCurrentPlayer(next)
     }
-  }, [turnComplete, currentPlayer, players.length, roundOver])
+  }, [turnComplete, currentPlayer, players.length, roundOver, finalTurnPlayer])
 
   // When roundOver toggles to true, finalize hole scores.
   useEffect(() => {
@@ -594,8 +603,8 @@ export function useGameState(config = {}) {
     setTurnComplete([false, false])
     setMustFlipAfterDiscard([false, false])
     setRoundOver(false)
-    window._finalTurn = false
-    window._finalTurnPending = false
+    setFinalTurnPlayer(null)
+    setFinalTurnPending(false)
     setCurrentHole(h => h + 1)
     // Auto flip two random computer cards (player index 1)
     setPlayers(prev => prev.map((p, i) => {
@@ -709,8 +718,8 @@ export function useGameState(config = {}) {
       setCurrentHole(parsed.currentHole || 1)
       setHoleScores(parsed.holeScores || [])
       // Clear transient final turn flags on load (they can't be reliably resumed)
-      window._finalTurn = false
-      window._finalTurnPending = false
+      setFinalTurnPlayer(null)
+      setFinalTurnPending(false)
       // overallTotals derived; ignore persisted overallTotals if present
     } catch (e) {
       console.warn('Failed to load saved game state', e)
@@ -799,6 +808,8 @@ export function useGameState(config = {}) {
     visibleScores,
     runningTotalsWithBonus,
     clearSavedGame,
+    finalTurnPlayer,
+    finalTurnPending,
     ...testHelpers,
   }
 }

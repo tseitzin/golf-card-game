@@ -44,6 +44,8 @@ export default function App() {
     visibleScores,
     runningTotalsWithBonus,
     clearSavedGame,
+    finalTurnPlayer,
+    finalTurnPending,
   } = useGameState({ aiSpeed })
 
   // Turn advancement now automatic; no manual End Turn handler.
@@ -115,7 +117,7 @@ export default function App() {
             >
               {playerSetup[currentPlayer].name || `Player ${currentPlayer + 1}`}&#39;s Turn
             </div>
-            {typeof window._finalTurn === 'number' && !roundOver && (
+            {finalTurnPlayer !== null && !roundOver && (
               <div
                 style={{
                   background: '#DC2626',
@@ -133,7 +135,7 @@ export default function App() {
                 }}
               >
                 <span style={{ fontSize: 14 }}>Final Turn</span>
-                {window._finalTurnPending && (
+                {finalTurnPending && (
                   <span style={{ fontSize: 11, fontStyle: 'italic', opacity: 0.85 }}>
                     awaiting action
                   </span>
