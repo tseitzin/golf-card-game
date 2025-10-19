@@ -11,7 +11,7 @@ import { useEffect, useRef } from 'react'
  */
 export default function Card({ card, onClick, interactive, width = 52, height = 78, flipDelay = 0 }) {
   const faceUp = !!card?.faceUp
-  const displayValue = faceUp ? card.value : '?'
+  const displayValue = faceUp ? card.value : card?.value
   const ref = useRef(null)
 
   useEffect(() => {
@@ -49,20 +49,54 @@ export default function Card({ card, onClick, interactive, width = 52, height = 
           position: 'absolute',
           inset: 0,
           backfaceVisibility: 'hidden',
-          background: '#333',
-          color: '#eee',
-          border: '1px solid #333',
+          transform: 'rotateY(0deg)',
+          transformStyle: 'preserve-3d',
           borderRadius: 8,
+          border: '1px solid #0f172a',
+          overflow: 'hidden',
+          boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.08)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: 20,
-          fontWeight: '600',
-          transform: 'rotateY(0deg)',
-          transformStyle: 'preserve-3d',
+          background: 'linear-gradient(135deg, #0f3b27 0%, #14532d 55%, #1d7a43 100%)',
         }}
       >
-        ?
+        <div
+          style={{
+            position: 'absolute',
+            inset: '-40%',
+            backgroundImage:
+              'repeating-linear-gradient(45deg, rgba(255,214,0,0.12) 0, rgba(255,214,0,0.12) 6px, transparent 6px, transparent 12px)',
+            opacity: 0.55,
+          }}
+        />
+        <div
+          style={{
+            position: 'relative',
+            zIndex: 1,
+            width: '34px',
+            height: '34px',
+            borderRadius: '50%',
+            border: '2px solid rgba(255,214,0,0.7)',
+            background: 'radial-gradient(circle, rgba(255,214,0,0.25) 0%, rgba(20,83,45,0.9) 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 0 6px rgba(255,214,0,0.25)',
+          }}
+        >
+          <span
+            style={{
+              color: '#fef08a',
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+            }}
+          >
+            Golf
+          </span>
+        </div>
       </div>
       <div
         style={{
