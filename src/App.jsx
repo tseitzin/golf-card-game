@@ -18,9 +18,12 @@ export default function App() {
   }, [aiSpeed])
   const {
     playerSetup,
+    playerCount,
     setupComplete,
+    setupError,
     handleSetupChange,
     handleSetupSubmit,
+    handlePlayerCountChange,
     players,
     currentPlayer,
     setCurrentPlayer,
@@ -50,25 +53,30 @@ export default function App() {
 
   // Turn advancement now automatic; no manual End Turn handler.
 
+  const currentInitialFlips = initialFlips[currentPlayer] ?? false
+  const currentTurnComplete = turnComplete[currentPlayer] ?? false
+  const currentFirstTurnDraw = firstTurnDraw[currentPlayer] ?? false
+  const currentPlayerConfig = playerSetup[currentPlayer] || {}
+
   const canDraw =
     !roundOver &&
-    initialFlips[currentPlayer] &&
-    !turnComplete[currentPlayer] &&
-    (!firstTurnDraw[currentPlayer] || (firstTurnDraw[currentPlayer] && !drawnCard))
+    currentInitialFlips &&
+    !currentTurnComplete &&
+    (!currentFirstTurnDraw || (currentFirstTurnDraw && !drawnCard))
 
   const canPickUp =
     !roundOver &&
-    initialFlips[currentPlayer] &&
-    !turnComplete[currentPlayer] &&
+    currentInitialFlips &&
+    !currentTurnComplete &&
     discardPile.length > 0 &&
     !drawnCard
 
-  const canDiscard = !roundOver && !turnComplete[currentPlayer]
+  const canDiscard = !roundOver && !currentTurnComplete
 
-  const playerNames = [
-    playerSetup[0].name || 'You',
-    playerSetup[1].name || 'Computer',
-  ]
+  const playerNames = playerSetup.map((config, idx) => {
+    if (config?.name) return config.name
+    return config?.isComputer ? `Computer ${idx + 1}` : `Player ${idx + 1}`
+  })
 
   return (
     <div>
@@ -76,8 +84,11 @@ export default function App() {
         {!setupComplete ? (
           <PlayerSetup
             playerSetup={playerSetup}
+            playerCount={playerCount}
+            onPlayerCountChange={handlePlayerCountChange}
             onChange={handleSetupChange}
             onSubmit={handleSetupSubmit}
+            setupError={setupError}
           />
         ) : (
           <>
@@ -109,13 +120,15 @@ export default function App() {
             </div>
             <div
               style={{
-                color: playerSetup[currentPlayer].color,
+                color: currentPlayerConfig.color || '#fff',
                 fontWeight: 'bold',
                 marginBottom: 8,
                 fontSize: 22,
               }}
             >
-              {playerSetup[currentPlayer].name || `Player ${currentPlayer + 1}`}&#39;s Turn
+              {(currentPlayerConfig.name ||
+                (currentPlayerConfig.isComputer ? `Computer ${currentPlayer + 1}` : `Player ${currentPlayer + 1}`))}
+              &#39;s Turn
             </div>
             {finalTurnPlayer !== null && !roundOver && (
               <div
@@ -145,19 +158,25 @@ export default function App() {
             <div
               style={{
                 display: 'flex',
-                gap: '48px',
+                gap: '32px',
                 marginBottom: '32px',
                 justifyContent: 'center',
+                flexWrap: 'wrap',
               }}
             >
-              {[0, 1].map(idx => (
+              {players.map((player, idx) => (
                 <PlayerBoard
                   key={idx}
                   index={idx}
-                  player={players[idx]}
+                  player={player}
                   name={playerNames[idx]}
-                  color={playerSetup[idx].color}
-                  runningTotal={runningTotalsWithBonus ? runningTotalsWithBonus[idx] : visibleScores[idx]}
+                  color={playerSetup[idx]?.color || '#fff'}
+                  isComputer={!!playerSetup[idx]?.isComputer}
+                  runningTotal={
+                    runningTotalsWithBonus?.[idx] ??
+                    (visibleScores ? visibleScores[idx] : undefined) ??
+                    0
+                  }
                   canInteractWithCard={canInteractWithCard}
                   onCardClick={handleCardClick}
                 />

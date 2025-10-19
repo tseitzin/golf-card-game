@@ -6,6 +6,7 @@ export default function PlayerBoard({
   player,
   name,
   color,
+  isComputer,
   runningTotal,
   canInteractWithCard,
   onCardClick,
@@ -53,10 +54,10 @@ export default function PlayerBoard({
       >
         {(player?.cards || Array(8).fill(null)).map((card, idxCard) => {
           const isInteractive = card ? canInteractWithCard(index, idxCard) : false
-          // Flip stagger: if this is computer (index 1) and card just transitioned to faceUp while previous was false
+          // Stagger flips slightly for computer-controlled seats when cards auto-reveal.
           let flipDelay = 0
           const prev = prevFaceUpRef.current[idxCard]
-          if (index === 1 && card?.faceUp && prev === false) {
+          if (isComputer && card?.faceUp && prev === false) {
             // Stagger based on how many other newly flipped in this pass (simple idx weighting)
             flipDelay = (idxCard % 4) * 40
           }

@@ -11,6 +11,59 @@ const BASE_COUNTS = (() => {
   return m
 })()
 
+const DEFAULT_COLORS = ['#fbbf24', '#38bdf8', '#f472b6', '#34d399', '#c084fc', '#f97316']
+
+const createSetupEntry = index => ({
+  name: '',
+  color: DEFAULT_COLORS[index % DEFAULT_COLORS.length],
+  isComputer: index === 1,
+})
+
+const ensureAtLeastOneHuman = setup => {
+  if (setup.some(p => !p.isComputer)) return setup
+  if (setup.length === 0) return setup
+  const next = [...setup]
+  next[0] = { ...next[0], isComputer: false }
+  return next
+}
+
+const resizeSetup = (setup, count) => {
+  let next = setup.slice(0, count)
+  if (next.length < count) {
+    const additions = Array.from({ length: count - next.length }, (_, offset) => createSetupEntry(next.length + offset))
+    next = next.concat(additions)
+  }
+  return ensureAtLeastOneHuman(next)
+}
+
+const dealPlayersFromDeck = (deckSource, count) => {
+  const players = []
+  for (let i = 0; i < count; i++) {
+    const start = i * 8
+    const slice = deckSource.slice(start, start + 8)
+    players.push({ cards: slice.map(card => ({ ...card, faceUp: false })), flippedCount: 0 })
+  }
+  const rest = deckSource.slice(count * 8)
+  return { players, rest }
+}
+
+const autoFlipComputerCards = (player, flips = 2) => {
+  const hiddenIdxs = player.cards.map((c, idx) => (!c.faceUp ? idx : -1)).filter(idx => idx !== -1)
+  if (hiddenIdxs.length === 0) return player
+  const toFlip = []
+  const available = [...hiddenIdxs]
+  for (let i = 0; i < flips && available.length > 0; i++) {
+    const pickIndex = Math.floor(Math.random() * available.length)
+    const [choice] = available.splice(pickIndex, 1)
+    toFlip.push(choice)
+  }
+  return {
+    ...player,
+    cards: player.cards.map((c, idx) => (toFlip.includes(idx) ? { ...c, faceUp: true } : c)),
+    flippedCount: player.flippedCount + toFlip.length,
+  }
+}
+
 function computeExpectedUnknownValue(players, discardPile, drawnCard) {
   const remaining = new Map(BASE_COUNTS)
   const dec = val => {
@@ -57,66 +110,111 @@ export function useGameState(config = {}) {
     }
     return buildDeck()
   }, [initialDeck])
-  const [playerSetup, setPlayerSetup] = useState([
-    { name: '', color: '#fbbf24' },
-    { name: '', color: '#38bdf8' },
-  ])
+  const INITIAL_PLAYER_COUNT = 2
+  const [playerCount, setPlayerCount] = useState(INITIAL_PLAYER_COUNT)
+  const [playerSetup, setPlayerSetup] = useState(() => resizeSetup([], INITIAL_PLAYER_COUNT))
+  const initialDeal = useMemo(() => dealPlayersFromDeck(deck, INITIAL_PLAYER_COUNT), [deck])
+  const [players, setPlayers] = useState(initialDeal.players)
+  const [deckRest, setDeckRest] = useState(initialDeal.rest)
   const [setupComplete, setSetupComplete] = useState(false)
   const [currentPlayer, setCurrentPlayer] = useState(0)
-  const [players, setPlayers] = useState(() => [
-    { cards: deck.slice(0, 8).map(c => ({ ...c, faceUp: false })), flippedCount: 0 },
-    { cards: deck.slice(8, 16).map(c => ({ ...c, faceUp: false })), flippedCount: 0 },
-  ])
-  const [deckRest, setDeckRest] = useState(deck.slice(16))
   const [drawnCard, setDrawnCard] = useState(null)
   const [discardPile, setDiscardPile] = useState([])
   const [discardTop, setDiscardTop] = useState(null)
-  const [initialFlips, setInitialFlips] = useState([false, false])
-  const [firstTurnDraw, setFirstTurnDraw] = useState([false, false])
-  const [turnComplete, setTurnComplete] = useState([false, false])
-  const [mustFlipAfterDiscard, setMustFlipAfterDiscard] = useState([false, false])
+  const [initialFlips, setInitialFlips] = useState(() => Array(INITIAL_PLAYER_COUNT).fill(false))
+  const [firstTurnDraw, setFirstTurnDraw] = useState(() => Array(INITIAL_PLAYER_COUNT).fill(false))
+  const [turnComplete, setTurnComplete] = useState(() => Array(INITIAL_PLAYER_COUNT).fill(false))
+  const [mustFlipAfterDiscard, setMustFlipAfterDiscard] = useState(() => Array(INITIAL_PLAYER_COUNT).fill(false))
   const [roundOver, setRoundOver] = useState(false)
   const [currentHole, setCurrentHole] = useState(1) // 1..9
-  const [holeScores, setHoleScores] = useState([]) // array of { hole, scores: [p0, p1] }
+  const [holeScores, setHoleScores] = useState([]) // array of { hole, scores: [...] }
   // Track previous all-face-up state to detect the exact moment a player finishes.
-  const prevAllFaceUpRef = useRef([false, false])
+  const prevAllFaceUpRef = useRef(Array(INITIAL_PLAYER_COUNT).fill(false))
   const [finalTurnPlayer, setFinalTurnPlayer] = useState(null)
   const [finalTurnPending, setFinalTurnPending] = useState(false)
+  const [finalTurnQueue, setFinalTurnQueue] = useState([])
+  const [setupError, setSetupError] = useState(null)
 
-  const handleSetupChange = useCallback((idx, field, value) => {
-    setPlayerSetup(prev => prev.map((p, i) => (i === idx ? { ...p, [field]: value } : p)))
+  const resetTurnState = useCallback(count => {
+    setInitialFlips(Array(count).fill(false))
+    setFirstTurnDraw(Array(count).fill(false))
+    setTurnComplete(Array(count).fill(false))
+    setMustFlipAfterDiscard(Array(count).fill(false))
+    prevAllFaceUpRef.current = Array(count).fill(false)
   }, [])
 
-  const handleSetupSubmit = useCallback(e => {
-    e.preventDefault()
-    // Seed discard pile with top card before gameplay starts.
-    if (discardTop == null && deckRest.length > 0) {
-      const [top, ...rest] = deckRest
+  const handlePlayerCountChange = useCallback(
+    nextCount => {
+      if (setupComplete) return
+      const clamped = Math.min(6, Math.max(2, nextCount))
+      if (clamped === playerCount) return
+      setPlayerCount(clamped)
+      setPlayerSetup(prev => resizeSetup(prev, clamped))
+      const { players: freshPlayers, rest } = dealPlayersFromDeck(deck, clamped)
+      setPlayers(freshPlayers)
       setDeckRest(rest)
-      const seed = { ...top, faceUp: true }
-      setDiscardTop(seed)
-      setDiscardPile([seed])
-    }
-    // Auto-flip two random cards for computer (player index 1) only; human selects manually.
-    setPlayers(prev =>
-      prev.map((p, i) => {
-        if (i !== 1) return p
-        let hiddenIdxs = p.cards.map((c, ci) => ci).filter(ci => !p.cards[ci].faceUp)
-        const toFlip = []
-        for (let f = 0; f < 2 && hiddenIdxs.length > 0; f++) {
-          const pick = hiddenIdxs.splice(Math.floor(Math.random() * hiddenIdxs.length), 1)[0]
-          toFlip.push(pick)
+      setDrawnCard(null)
+      setDiscardPile([])
+      setDiscardTop(null)
+      resetTurnState(clamped)
+      setCurrentPlayer(0)
+      setFinalTurnPlayer(null)
+      setFinalTurnPending(false)
+      setFinalTurnQueue([])
+      setRoundOver(false)
+      setSetupError(null)
+    },
+    [deck, playerCount, resetTurnState, setupComplete],
+  )
+
+  const handleSetupChange = useCallback((idx, field, value) => {
+    setPlayerSetup(prev => {
+      const next = prev.map((p, i) => (i === idx ? { ...p, [field]: value } : p))
+      if (field === 'isComputer' && value) {
+        if (!next.some(p => !p.isComputer)) {
+          return prev
         }
-        return {
-          ...p,
-          cards: p.cards.map((c, ci) => (toFlip.includes(ci) ? { ...c, faceUp: true } : c)),
-          flippedCount: p.flippedCount + toFlip.length,
-        }
-      }),
-    )
-    setInitialFlips([false, true])
-    setSetupComplete(true)
-  }, [deckRest])
+      }
+      return ensureAtLeastOneHuman(next)
+    })
+    setSetupError(null)
+  }, [])
+
+  const handleSetupSubmit = useCallback(
+    e => {
+      e.preventDefault()
+      if (!playerSetup.some(p => !p.isComputer)) {
+        setSetupError('At least one human player is required.')
+        return
+      }
+      setSetupError(null)
+      // Seed discard pile with top card before gameplay starts.
+      if (discardTop == null && deckRest.length > 0) {
+        const [top, ...rest] = deckRest
+        setDeckRest(rest)
+        const seed = { ...top, faceUp: true }
+        setDiscardTop(seed)
+        setDiscardPile([seed])
+      }
+      setPlayers(prev =>
+        prev.map((p, i) => (playerSetup[i]?.isComputer ? autoFlipComputerCards(p) : p)),
+      )
+      setPlayerCount(playerSetup.length)
+      const baselineFalse = Array(playerSetup.length).fill(false)
+      setFirstTurnDraw(baselineFalse)
+      setTurnComplete(baselineFalse)
+      setMustFlipAfterDiscard(baselineFalse)
+      setInitialFlips(playerSetup.map(cfg => !!cfg.isComputer))
+      setSetupComplete(true)
+      setFinalTurnQueue([])
+      setFinalTurnPlayer(null)
+      setFinalTurnPending(false)
+      prevAllFaceUpRef.current = Array(playerSetup.length).fill(false)
+      const startingHuman = playerSetup.findIndex(p => !p.isComputer)
+      setCurrentPlayer(startingHuman === -1 ? 0 : startingHuman)
+    },
+    [deckRest, discardTop, playerSetup],
+  )
 
   const drawCard = useCallback(() => {
     // Prevent drawing before setup is complete (initial simultaneous flips & discard seed must occur first)
@@ -144,13 +242,12 @@ export function useGameState(config = {}) {
     if (faceDownCount === 1) {
       setTurnComplete(prev => prev.map((v, i) => (i === currentPlayer ? true : v)))
       setMustFlipAfterDiscard(prev => prev.map((v, i) => (i === currentPlayer ? false : v)))
-      // Keep firstTurnDraw true for computer to avoid second draw in same turn
-      setFirstTurnDraw(prev => prev.map((v, i) => (i === currentPlayer ? (currentPlayer === 1 ? true : false) : v)))
+      setFirstTurnDraw(prev => prev.map((v, i) => (i === currentPlayer ? (playerSetup[i]?.isComputer ? true : false) : v)))
     } else {
       setMustFlipAfterDiscard(prev => prev.map((v, i) => (i === currentPlayer ? true : v)))
-      setFirstTurnDraw(prev => prev.map((v, i) => (i === currentPlayer ? (currentPlayer === 1 ? true : false) : v)))
+      setFirstTurnDraw(prev => prev.map((v, i) => (i === currentPlayer ? (playerSetup[i]?.isComputer ? true : false) : v)))
     }
-  }, [currentPlayer, drawnCard, players, turnComplete, roundOver])
+  }, [currentPlayer, drawnCard, players, turnComplete, roundOver, playerSetup])
 
   const pickUpDiscard = useCallback(() => {
     if (roundOver) return
@@ -185,11 +282,11 @@ export function useGameState(config = {}) {
       }
       setDrawnCard(null)
       // Preserve firstTurnDraw for computer to block extra draw attempt
-      setFirstTurnDraw(prev => prev.map((v, i) => (i === currentPlayer ? (currentPlayer === 1 ? true : false) : v)))
+      setFirstTurnDraw(prev => prev.map((v, i) => (i === currentPlayer ? (playerSetup[i]?.isComputer ? true : false) : v)))
       setMustFlipAfterDiscard(prev => prev.map((v, i) => (i === currentPlayer ? false : v)))
       setTurnComplete(prev => prev.map((v, i) => (i === currentPlayer ? true : v)))
     },
-    [currentPlayer, drawnCard, turnComplete, players, roundOver],
+    [currentPlayer, drawnCard, turnComplete, players, roundOver, playerSetup],
   )
 
   const handleCardClick = useCallback(
@@ -267,7 +364,10 @@ export function useGameState(config = {}) {
 
   // Ensure initialFlips flags remain consistent if flippedCount reaches 2 after setup change sequencing.
   useEffect(() => {
-    setInitialFlips(prev => prev.map((v, i) => (v || players[i].flippedCount >= 2)))
+    setInitialFlips(prev => players.map((player, idx) => (prev[idx] || player.flippedCount >= 2)))
+    if (prevAllFaceUpRef.current.length !== players.length) {
+      prevAllFaceUpRef.current = Array(players.length).fill(false)
+    }
   }, [players])
 
   const delay = useCallback(
@@ -297,25 +397,40 @@ export function useGameState(config = {}) {
   })()
 
   const computerTurn = useCallback(async () => {
-    if (!setupComplete || currentPlayer !== 1 || roundOver) return
-    const cards = players[1].cards
+    if (!setupComplete || roundOver) return
+    const playerIndex = currentPlayer
+    if (!playerSetup[playerIndex]?.isComputer) return
+    const currentState = players[playerIndex]
+    if (!currentState) return
+    const cards = currentState.cards
 
     // Initial two flips if not done yet
-    if (!initialFlips[1] && players[1].flippedCount === 0) {
+    if (!initialFlips[playerIndex] && currentState.flippedCount === 0) {
       let hidden = cards.map((c, i) => (!c.faceUp ? i : -1)).filter(i => i !== -1)
       for (let f = 0; f < 2; f++) {
         if (hidden.length === 0) break
         const idx = hidden[Math.floor(Math.random() * hidden.length)]
-        setPlayers(ps => ps.map((p, pi) => (pi === 1 ? { ...p, cards: p.cards.map((c, ci) => (ci === idx ? { ...c, faceUp: true } : c)), flippedCount: p.flippedCount + 1 } : p)))
+        setPlayers(ps =>
+          ps.map((p, pi) =>
+            pi === playerIndex
+              ? {
+                  ...p,
+                  cards: p.cards.map((c, ci) => (ci === idx ? { ...c, faceUp: true } : c)),
+                  flippedCount: p.flippedCount + 1,
+                }
+              : p,
+          ),
+        )
         hidden = hidden.filter(i => i !== idx)
         await delay(stepDelay)
       }
-      setInitialFlips(f => f.map((v, i) => (i === 1 ? true : v)))
+      setInitialFlips(f => f.map((v, i) => (i === playerIndex ? true : v)))
+      return
     }
 
-    // Evaluate skip heuristic BEFORE considering discard pickup or drawing: if exactly one facedown remains, consider skipping to avoid triggering final round prematurely.
+    // Evaluate skip heuristic BEFORE considering discard pickup or drawing
     const faceDownRemaining = cards.filter(c => !c.faceUp).length
-    if (enableSkipHeuristic && faceDownRemaining === 1 && !drawnCard && !turnComplete[1]) {
+    if (enableSkipHeuristic && faceDownRemaining === 1 && !drawnCard && !turnComplete[playerIndex]) {
       let exposedSum = 0
       let matchColumns = 0
       for (let col = 0; col < COLUMN_COUNT; col++) {
@@ -327,22 +442,19 @@ export function useGameState(config = {}) {
       }
       const layoutGood = matchColumns >= 1 && exposedSum <= 18
       if (layoutGood) {
-        setTurnComplete(tc => tc.map((v,i) => (i===1 ? true : v)))
+        setTurnComplete(tc => tc.map((v, i) => (i === playerIndex ? true : v)))
         return
       }
     }
 
-    // Helper: evaluate top discard usefulness before drawing
     const evaluateDiscard = topDiscard => {
       if (!topDiscard) return null
-      // Priority order: complete pair; improve high card; low placeholder
       for (let col = 0; col < COLUMN_COUNT; col++) {
         const a = col
         const b = col + COLUMN_COUNT
         if (cards[a].faceUp && !cards[b].faceUp && cards[a].value === topDiscard.value) return { idx: b, reason: 'pair' }
         if (cards[b].faceUp && !cards[a].faceUp && cards[b].value === topDiscard.value) return { idx: a, reason: 'pair' }
       }
-      // Improve high card (avoid matched pairs)
       let best = null
       for (let i = 0; i < cards.length; i++) {
         const pairIdx = i < COLUMN_COUNT ? i + COLUMN_COUNT : i - COLUMN_COUNT
@@ -353,11 +465,9 @@ export function useGameState(config = {}) {
         }
       }
       if (best) return best
-      // Low placeholder if very low value and any hidden remains
       if (topDiscard.value <= 3) {
         const hiddenIdx = cards.findIndex(c => !c.faceUp)
         if (hiddenIdx !== -1) {
-          // Avoid consuming the final facedown as a mere placeholder if skip heuristic disabled; prefer drawing for evaluation
           if (faceDownRemaining === 1 && !enableSkipHeuristic) return null
           return { idx: hiddenIdx, reason: 'placeholder' }
         }
@@ -365,7 +475,7 @@ export function useGameState(config = {}) {
       return null
     }
 
-    if (!drawnCard && initialFlips[1] && !turnComplete[1] && discardPile.length > 0) {
+    if (!drawnCard && initialFlips[playerIndex] && !turnComplete[playerIndex] && discardPile.length > 0) {
       const decision = evaluateDiscard(discardPile[0])
       if (decision) {
         await delay(quickDelay)
@@ -376,15 +486,12 @@ export function useGameState(config = {}) {
       }
     }
 
-    // Draw if not yet drawn this turn (after potential skip decision)
-    if (!firstTurnDraw[1] && initialFlips[1] && !drawnCard) {
+    if (!firstTurnDraw[playerIndex] && initialFlips[playerIndex] && !drawnCard) {
       await delay(stepDelay)
       drawCard()
       return
     }
 
-    // If only one faceDown and we have drawn, decide finalize
-    // (faceDownRemaining already computed above)
     if (faceDownRemaining === 1 && drawnCard) {
       const lastIdx = cards.findIndex(c => !c.faceUp)
       const pairIdx = lastIdx < COLUMN_COUNT ? lastIdx + COLUMN_COUNT : lastIdx - COLUMN_COUNT
@@ -398,27 +505,27 @@ export function useGameState(config = {}) {
       return
     }
 
-    // Handle a drawn card strategically with heuristics & EV
-    if (drawnCard && !turnComplete[1]) {
-      // 1. Complete a vertical pair immediately
+    if (drawnCard && !turnComplete[playerIndex]) {
       for (let col = 0; col < COLUMN_COUNT; col++) {
         const a = col
         const b = col + COLUMN_COUNT
         if (cards[a].faceUp && cards[a].value === drawnCard.value && !cards[b].faceUp) {
-          await delay(quickDelay); replaceCard(b); return
+          await delay(quickDelay)
+          replaceCard(b)
+          return
         }
         if (cards[b].faceUp && cards[b].value === drawnCard.value && !cards[a].faceUp) {
-          await delay(quickDelay); replaceCard(a); return
+          await delay(quickDelay)
+          replaceCard(a)
+          return
         }
       }
       const expectedUnknown = computeExpectedUnknownValue(players, discardPile, drawnCard)
-      // 2. High card discard heuristic
       if (drawnCard.value > 9) {
         await delay(quickDelay)
         discardDrawnCard()
         return
       }
-      // 3. Improve a high exposed card (avoid matched pairs)
       let targetIdx = -1
       let bestGain = 0
       for (let i = 0; i < cards.length; i++) {
@@ -426,26 +533,37 @@ export function useGameState(config = {}) {
         const isPair = cards[i].faceUp && cards[pairIdx].faceUp && cards[i].value === cards[pairIdx].value
         if (cards[i].faceUp && !isPair && drawnCard.value < cards[i].value) {
           const gain = cards[i].value - drawnCard.value
-          if (gain > bestGain) { bestGain = gain; targetIdx = i }
+          if (gain > bestGain) {
+            bestGain = gain
+            targetIdx = i
+          }
         }
       }
       if (targetIdx !== -1 && drawnCard.value <= 9) {
-        await delay(quickDelay); replaceCard(targetIdx); return
+        await delay(quickDelay)
+        replaceCard(targetIdx)
+        return
       }
-      // 4. Replace a facedown if drawn is significantly better than expectation
       if (drawnCard.value <= expectedUnknown - 1.5) {
         const hiddenIdx = cards.findIndex(c => !c.faceUp)
-        if (hiddenIdx !== -1) { await delay(quickDelay); replaceCard(hiddenIdx); return }
+        if (hiddenIdx !== -1) {
+          await delay(quickDelay)
+          replaceCard(hiddenIdx)
+          return
+        }
       }
-      // 5. Reveal info: replace first hidden
       const hiddenIdx = cards.findIndex(c => !c.faceUp)
-      if (hiddenIdx !== -1) { await delay(quickDelay); replaceCard(hiddenIdx); return }
-      // 6. Nothing beneficial -> discard
-      await delay(quickDelay); discardDrawnCard(); return
+      if (hiddenIdx !== -1) {
+        await delay(quickDelay)
+        replaceCard(hiddenIdx)
+        return
+      }
+      await delay(quickDelay)
+      discardDrawnCard()
+      return
     }
 
-    // Must flip after discard (forced reveal)
-    if (mustFlipAfterDiscard[1]) {
+    if (mustFlipAfterDiscard[playerIndex]) {
       let bestIdx = -1
       for (let col = 0; col < COLUMN_COUNT; col++) {
         const a = col
@@ -462,16 +580,25 @@ export function useGameState(config = {}) {
       if (bestIdx === -1) bestIdx = cards.findIndex(c => !c.faceUp)
       if (bestIdx !== -1) {
         await delay(quickDelay)
-        setPlayers(ps => ps.map((p, pi) => (pi === 1 ? { ...p, cards: p.cards.map((c, j) => (j === bestIdx ? { ...c, faceUp: true } : c)), flippedCount: p.flippedCount + 1 } : p)))
-        setMustFlipAfterDiscard(a => a.map((v, i) => (i === 1 ? false : v)))
-        setFirstTurnDraw(a => a.map((v, i) => (i === 1 ? false : v)))
-        setTurnComplete(tc => tc.map((v, i) => (i === 1 ? true : v)))
+        setPlayers(ps =>
+          ps.map((p, pi) =>
+            pi === playerIndex
+              ? {
+                  ...p,
+                  cards: p.cards.map((c, j) => (j === bestIdx ? { ...c, faceUp: true } : c)),
+                  flippedCount: p.flippedCount + 1,
+                }
+              : p,
+          ),
+        )
+        setMustFlipAfterDiscard(a => a.map((v, i) => (i === playerIndex ? false : v)))
+        setFirstTurnDraw(a => a.map((v, i) => (i === playerIndex ? false : v)))
+        setTurnComplete(tc => tc.map((v, i) => (i === playerIndex ? true : v)))
       }
       return
     }
 
-    // Fallback: draw if turn still open
-    if (!turnComplete[1] && !drawnCard && initialFlips[1]) {
+    if (!turnComplete[playerIndex] && !drawnCard && initialFlips[playerIndex]) {
       await delay(stepDelay)
       drawCard()
     }
@@ -486,64 +613,103 @@ export function useGameState(config = {}) {
     mustFlipAfterDiscard,
     pickUpDiscard,
     players,
+    playerSetup,
     replaceCard,
     roundOver,
     setupComplete,
     stepDelay,
     delay,
     turnComplete,
+    enableSkipHeuristic,
   ])
+
+  const finalizeRound = useCallback(() => {
+    setPlayers(ps =>
+      ps.map(p => ({
+        ...p,
+        cards: p.cards.map(c => (c.faceUp ? c : { ...c, faceUp: true })),
+      })),
+    )
+    setRoundOver(true)
+    setFinalTurnPlayer(null)
+    setFinalTurnPending(false)
+    setFinalTurnQueue([])
+  }, [])
 
   useEffect(() => {
     if (disableComputerAuto) return
-    if (setupComplete && currentPlayer === 1 && !roundOver) {
-      computerTurn()
-    }
-  }, [computerTurn, currentPlayer, roundOver, setupComplete, disableComputerAuto])
+    if (!setupComplete || roundOver) return
+    if (!playerSetup[currentPlayer]?.isComputer) return
+    computerTurn()
+  }, [computerTurn, currentPlayer, roundOver, setupComplete, disableComputerAuto, playerSetup])
 
   useEffect(() => {
     if (roundOver) return
     const playerFlippedAll = players.map(p => p.cards.every(c => c.faceUp))
     const prev = prevAllFaceUpRef.current
-    // Detect newly completed players irrespective of currentPlayer to avoid race.
+    const hasHidden = index => players[index]?.cards?.some(c => !c.faceUp)
+
     for (let i = 0; i < playerFlippedAll.length; i++) {
       if (!prev[i] && playerFlippedAll[i]) {
-        const other = i === 0 ? 1 : 0
-        if (players[other].cards.some(c => !c.faceUp)) {
-          // Opponent still has hidden cards -> grant them a final turn if not already set.
-          if (finalTurnPlayer === null) {
-            setFinalTurnPlayer(other)
-            setFinalTurnPending(true)
-            if (currentPlayer !== other) setCurrentPlayer(other)
-          }
+        const pending = []
+        for (let offset = 1; offset < players.length; offset++) {
+          const idx = (i + offset) % players.length
+          if (hasHidden(idx)) pending.push(idx)
+        }
+        if (pending.length === 0) {
+          finalizeRound()
+        } else if (finalTurnPlayer === null) {
+          const [first, ...rest] = pending
+          setFinalTurnPlayer(first)
+          setFinalTurnPending(true)
+          setFinalTurnQueue(rest)
+          if (currentPlayer !== first) setCurrentPlayer(first)
         } else {
-          // Opponent already fully revealed (or simultaneous finish) -> finalize immediately.
-          setPlayers(ps =>
-            ps.map(p => ({
-              ...p,
-              cards: p.cards.map(c => (c.faceUp ? c : { ...c, faceUp: true })),
-            })),
-          )
-          setRoundOver(true)
-          setFinalTurnPlayer(null)
-          setFinalTurnPending(false)
+          setFinalTurnQueue(queue => {
+            const queueSet = new Set(queue.filter(idx => hasHidden(idx)))
+            pending.forEach(idx => {
+              if (idx !== finalTurnPlayer && hasHidden(idx)) {
+                queueSet.add(idx)
+              }
+            })
+            return Array.from(queueSet)
+          })
         }
       }
     }
+
     prevAllFaceUpRef.current = playerFlippedAll
-    // Conclude round after final turn player completes (pending cleared) by flipping any remaining hidden cards.
+
     if (finalTurnPlayer !== null && turnComplete[finalTurnPlayer] && !finalTurnPending) {
-      setPlayers(ps =>
-        ps.map(p => ({
-          ...p,
-          cards: p.cards.map(c => (c.faceUp ? c : { ...c, faceUp: true })),
-        })),
-      )
-      setRoundOver(true)
-      setFinalTurnPlayer(null)
-      setFinalTurnPending(false)
+      if (finalTurnQueue.length > 0) {
+        let next = null
+        let remaining = [...finalTurnQueue]
+        while (remaining.length > 0 && next === null) {
+          const candidate = remaining.shift()
+          if (hasHidden(candidate)) next = candidate
+        }
+        setFinalTurnQueue(remaining.filter(idx => idx !== next))
+        if (next !== null) {
+          setFinalTurnPlayer(next)
+          setFinalTurnPending(true)
+          if (currentPlayer !== next) setCurrentPlayer(next)
+        } else {
+          finalizeRound()
+        }
+      } else {
+        finalizeRound()
+      }
     }
-  }, [players, roundOver, turnComplete, currentPlayer, finalTurnPlayer, finalTurnPending])
+  }, [
+    players,
+    roundOver,
+    turnComplete,
+    currentPlayer,
+    finalTurnPlayer,
+    finalTurnPending,
+    finalTurnQueue,
+    finalizeRound,
+  ])
 
   // Auto-advance turn when a player's turn completes and not in final turn resolution.
   useEffect(() => {
@@ -576,59 +742,52 @@ export function useGameState(config = {}) {
 
   const startNextHole = useCallback(() => {
     if (currentHole >= 9) return
+    const totalPlayers = playerSetup.length
+    if (totalPlayers === 0) return
     const newDeck = buildDeck()
-    // Deal fresh hands
-    const newPlayers = [
-      { cards: newDeck.slice(0, 8).map(c => ({ ...c, faceUp: false })), flippedCount: 0 },
-      { cards: newDeck.slice(8, 16).map(c => ({ ...c, faceUp: false })), flippedCount: 0 },
-    ]
-    setPlayers(newPlayers)
-    // Remaining deck (we will seed discard from here)
-    const remainder = newDeck.slice(16)
-    // Seed discard pile immediately so there is visible game state (like initial setup)
-    if (remainder.length > 0) {
-      const [top, ...rest] = remainder
+    const { players: freshPlayers, rest } = dealPlayersFromDeck(newDeck, totalPlayers)
+    const seededPlayers = freshPlayers.map((player, idx) =>
+      playerSetup[idx]?.isComputer ? autoFlipComputerCards(player) : player,
+    )
+
+    let remainingDeck = rest
+    let nextDiscardTop = null
+    let nextDiscardPile = []
+    if (remainingDeck.length > 0) {
+      const [top, ...restDeck] = remainingDeck
       const seed = { ...top, faceUp: true }
-      setDeckRest(rest)
-      setDiscardTop(seed)
-      setDiscardPile([seed])
-    } else {
-      setDeckRest(remainder)
-      setDiscardTop(null)
-      setDiscardPile([])
+      nextDiscardTop = seed
+      nextDiscardPile = [seed]
+      remainingDeck = restDeck
     }
+
+    setPlayers(seededPlayers)
+    setDeckRest(remainingDeck)
+    setDiscardTop(nextDiscardTop)
+    setDiscardPile(nextDiscardPile)
     setDrawnCard(null)
-    setInitialFlips([false, false])
-    setFirstTurnDraw([false, false])
-    setTurnComplete([false, false])
-    setMustFlipAfterDiscard([false, false])
+    resetTurnState(totalPlayers)
+    setInitialFlips(playerSetup.map(cfg => !!cfg.isComputer))
     setRoundOver(false)
     setFinalTurnPlayer(null)
     setFinalTurnPending(false)
+    setFinalTurnQueue([])
     setCurrentHole(h => h + 1)
-    // Auto flip two random computer cards (player index 1)
-    setPlayers(prev => prev.map((p, i) => {
-      if (i !== 1) return p
-      let hiddenIdxs = p.cards.map((c, ci) => ci).filter(ci => !p.cards[ci].faceUp)
-      const toFlip = []
-      for (let f = 0; f < 2 && hiddenIdxs.length > 0; f++) {
-        const pick = hiddenIdxs.splice(Math.floor(Math.random() * hiddenIdxs.length), 1)[0]
-        toFlip.push(pick)
-      }
-      return {
-        ...p,
-        cards: p.cards.map((c, ci) => (toFlip.includes(ci) ? { ...c, faceUp: true } : c)),
-        flippedCount: p.flippedCount + toFlip.length,
-      }
-    }))
-    setInitialFlips([false, true]) // Mark computer's initial flips complete
-    // If it's currently computer's turn, proactively trigger its logic so user sees immediate action.
+    const normalizedCurrent = currentPlayer >= totalPlayers ? 0 : currentPlayer
+    setCurrentPlayer(normalizedCurrent)
     setTimeout(() => {
-      if (currentPlayer === 1 && !disableComputerAuto) {
+      if (!disableComputerAuto && playerSetup[normalizedCurrent]?.isComputer) {
         computerTurn()
       }
     }, 0)
-  }, [currentHole, currentPlayer, computerTurn, disableComputerAuto])
+  }, [
+    currentHole,
+    currentPlayer,
+    computerTurn,
+    disableComputerAuto,
+    playerSetup,
+    resetTurnState,
+  ])
 
   // Running totals including any bonuses that are already guaranteed (i.e., fully revealed matched columns groups).
   const visibleScores = players.map(p => calculateVisibleScore(p.cards))
@@ -700,27 +859,53 @@ export function useGameState(config = {}) {
       if (!raw) return
       const parsed = JSON.parse(raw)
       if (parsed.version !== 1) return
-      // Basic shape validation
-      if (!Array.isArray(parsed.players) || !Array.isArray(parsed.holeScores)) return
-      setPlayerSetup(parsed.playerSetup || playerSetup)
-      setSetupComplete(parsed.setupComplete || false)
-      setCurrentPlayer(parsed.currentPlayer || 0)
-      setPlayers(parsed.players)
-      setDeckRest(parsed.deckRest || [])
-      setDrawnCard(parsed.drawnCard || null)
-      setDiscardPile(parsed.discardPile || [])
-      setDiscardTop(parsed.discardTop || (parsed.discardPile && parsed.discardPile[0]) || null)
-      setInitialFlips(parsed.initialFlips || [false, false])
-      setFirstTurnDraw(parsed.firstTurnDraw || [false, false])
-      setTurnComplete(parsed.turnComplete || [false, false])
-      setMustFlipAfterDiscard(parsed.mustFlipAfterDiscard || [false, false])
-      setRoundOver(parsed.roundOver || false)
+
+      const alignArray = (input, length, fillValue = false) => {
+        if (!Array.isArray(input)) return Array(length).fill(fillValue)
+        if (input.length === length) return input
+        const next = Array(length).fill(fillValue)
+        for (let i = 0; i < length; i++) {
+          next[i] = i < input.length && typeof input[i] !== 'undefined' ? input[i] : fillValue
+        }
+        return next
+      }
+
+      const savedPlayers = Array.isArray(parsed.players) && parsed.players.length ? parsed.players : null
+      const inferredCountRaw = savedPlayers
+        ? savedPlayers.length
+        : parsed.playerCount || (Array.isArray(parsed.playerSetup) ? parsed.playerSetup.length : INITIAL_PLAYER_COUNT)
+      const inferredCount = Math.min(6, Math.max(2, inferredCountRaw || INITIAL_PLAYER_COUNT))
+      const { players: fallbackPlayers, rest: fallbackRest } = dealPlayersFromDeck(deck, inferredCount)
+      const nextPlayers = savedPlayers && savedPlayers.length === inferredCount ? savedPlayers : fallbackPlayers
+      const nextSetup = ensureAtLeastOneHuman(resizeSetup(parsed.playerSetup || [], inferredCount))
+      const nextDeckRest = Array.isArray(parsed.deckRest) ? parsed.deckRest : fallbackRest
+      const nextDiscardPile = Array.isArray(parsed.discardPile) ? parsed.discardPile : []
+      const nextDiscardTop = parsed.discardTop || nextDiscardPile[0] || null
+      const nextDrawnCard = parsed.drawnCard || null
+      const requestedCurrent = typeof parsed.currentPlayer === 'number' ? parsed.currentPlayer : 0
+      const clampedCurrent = Math.min(Math.max(requestedCurrent, 0), inferredCount - 1)
+
+      setPlayerCount(inferredCount)
+      setPlayerSetup(nextSetup)
+      setSetupComplete(!!parsed.setupComplete)
+      setCurrentPlayer(clampedCurrent)
+      setPlayers(nextPlayers)
+      setDeckRest(nextDeckRest)
+      setDrawnCard(nextDrawnCard)
+      setDiscardPile(nextDiscardPile)
+      setDiscardTop(nextDiscardTop)
+      setInitialFlips(alignArray(parsed.initialFlips, inferredCount, false))
+      setFirstTurnDraw(alignArray(parsed.firstTurnDraw, inferredCount, false))
+      setTurnComplete(alignArray(parsed.turnComplete, inferredCount, false))
+      setMustFlipAfterDiscard(alignArray(parsed.mustFlipAfterDiscard, inferredCount, false))
+      setRoundOver(!!parsed.roundOver)
       setCurrentHole(parsed.currentHole || 1)
-      setHoleScores(parsed.holeScores || [])
-      // Clear transient final turn flags on load (they can't be reliably resumed)
+      setHoleScores(Array.isArray(parsed.holeScores) ? parsed.holeScores : [])
+      setSetupError(null)
       setFinalTurnPlayer(null)
       setFinalTurnPending(false)
-      // overallTotals derived; ignore persisted overallTotals if present
+      setFinalTurnQueue([])
+      prevAllFaceUpRef.current = Array(inferredCount).fill(false)
     } catch (e) {
       console.warn('Failed to load saved game state', e)
     }
@@ -748,6 +933,7 @@ export function useGameState(config = {}) {
         roundOver,
         currentHole,
         holeScores,
+        playerCount,
       }
       localStorage.setItem(persistenceKey, JSON.stringify(snapshot))
     } catch (e) {
@@ -770,6 +956,7 @@ export function useGameState(config = {}) {
     roundOver,
     currentHole,
     holeScores,
+    playerCount,
   ])
 
   const clearSavedGame = useCallback(() => {
@@ -780,9 +967,12 @@ export function useGameState(config = {}) {
 
   return {
     playerSetup,
+    playerCount,
     setupComplete,
+    setupError,
     handleSetupChange,
     handleSetupSubmit,
+    handlePlayerCountChange,
     players,
     currentPlayer,
     setCurrentPlayer,

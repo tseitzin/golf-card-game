@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { renderHook, act, waitFor } from '@testing-library/react'
 import { useGameState } from './useGameState.js'
 import { finishPlayer } from '../test/gameTestHelpers.js'
 
@@ -25,6 +25,14 @@ const flipTwoCards = result => {
   flipCard(result, 1)
 }
 
+const flushAsync = async (cycles = 1) => {
+  for (let i = 0; i < cycles; i++) {
+    await act(async () => {
+      await Promise.resolve()
+    })
+  }
+}
+
 describe('useGameState', () => {
   beforeEach(() => {
     vi.spyOn(Math, 'random').mockReturnValue(0.5)
@@ -45,6 +53,30 @@ describe('useGameState', () => {
     expect(result.current.players[0].cards).toHaveLength(8)
     expect(result.current.visibleScores[0]).toBe(0)
     expect(result.current.visibleScores[1]).toBe(0)
+  })
+
+  it('allows increasing player count before setup completion', () => {
+    const { result } = renderHook(() => useGameState({ enablePersistence: false }))
+
+    act(() => {
+      result.current.handlePlayerCountChange(5)
+    })
+
+    expect(result.current.playerCount).toBe(5)
+    expect(result.current.playerSetup).toHaveLength(5)
+    expect(result.current.players).toHaveLength(5)
+    expect(result.current.playerSetup.some(p => !p.isComputer)).toBe(true)
+  })
+
+  it('prevents converting the final human to a computer player', () => {
+    const { result } = renderHook(() => useGameState({ enablePersistence: false }))
+
+    act(() => {
+      result.current.handleSetupChange(0, 'isComputer', true)
+    })
+
+    expect(result.current.playerSetup[0].isComputer).toBe(false)
+    expect(result.current.setupError).toBeNull()
   })
 
   it('updates player setup and marks setup as complete on submit', () => {
@@ -113,10 +145,7 @@ describe('useGameState', () => {
       result.current.setCurrentPlayer(1)
     })
 
-    await act(async () => {
-      await Promise.resolve()
-      await Promise.resolve()
-    })
+    await flushAsync(5)
 
     const computer = result.current.players[1]
     expect(computer.flippedCount).toBeGreaterThanOrEqual(2)
@@ -134,9 +163,7 @@ describe('useGameState', () => {
 
     act(() => { finishPlayer(result, 0) })
 
-    await act(async () => {
-      await Promise.resolve()
-    })
+    await flushAsync()
 
     expect(result.current.finalTurnPlayer).toBe(1)
     expect(result.current.currentPlayer).toBe(1)
@@ -156,7 +183,7 @@ describe('useGameState', () => {
         flippedCount: 8,
       }))
     })
-    await act(async () => { await Promise.resolve() })
+    await flushAsync()
     // After effect runs, finalTurnPlayer should be 1 and pending initially true until turn switch effect clears it.
     expect(result.current.finalTurnPlayer).toBe(1)
     // currentPlayer should have been switched to 1; pending should now be false due to effect clearing when entering that turn.
@@ -177,9 +204,7 @@ describe('useGameState', () => {
       result.current.__setTurnComplete(tc => tc.map((val, i) => (i === 1 ? true : val)))
     })
 
-    await act(async () => {
-      await Promise.resolve()
-    })
+    await flushAsync()
 
     expect(result.current.roundOver).toBe(true)
     expect(result.current.finalTurnPlayer).toBe(null)
@@ -195,7 +220,7 @@ describe('useGameState', () => {
     act(() => { result.current.handleSetupSubmit(mockEvent()) })
     // Force computer (player 1) to have all cards face up while human still has hidden cards.
     act(() => { finishPlayer(result, 1) })
-    await act(async () => { await Promise.resolve() })
+    await flushAsync()
     // Expect final turn assigned to human (player 0)
     expect(result.current.finalTurnPlayer).toBe(0)
     expect(result.current.currentPlayer).toBe(0)
@@ -205,7 +230,7 @@ describe('useGameState', () => {
       finishPlayer(result, 0)
       result.current.__setTurnComplete(tc => tc.map((v,i) => i===0 ? true : v))
     })
-    await act(async () => { await Promise.resolve() })
+    await flushAsync()
     expect(result.current.roundOver).toBe(true)
     expect(result.current.finalTurnPlayer).toBe(null)
   })
@@ -255,6 +280,34 @@ describe('useGameState', () => {
     expect(result.current.holeScores.length).toBe(1) // next hole not scored yet
     expect(result.current.overallTotals).toEqual(prevTotals)
     expect(result.current.roundOver).toBe(false)
+  })
+
+  it('re-deals configured number of players and auto flips computers on new hole', () => {
+    const deck = createTestDeck()
+    const { result } = renderHook(() => useGameState({ disableDelays: true, initialDeck: deck, enablePersistence: false }))
+
+    act(() => {
+      result.current.handlePlayerCountChange(4)
+      result.current.handleSetupChange(2, 'isComputer', true)
+    })
+
+    act(() => {
+      result.current.handleSetupSubmit(mockEvent())
+      result.current.setRoundOver(true)
+      result.current.startNextHole()
+    })
+
+    expect(result.current.currentHole).toBe(2)
+    expect(result.current.players).toHaveLength(4)
+    const computerSeats = result.current.playerSetup
+      .map((cfg, idx) => (cfg.isComputer ? idx : null))
+      .filter(idx => idx !== null)
+    computerSeats.forEach(idx => {
+      expect(result.current.players[idx].flippedCount).toBeGreaterThanOrEqual(2)
+    })
+    expect(result.current.initialFlips).toEqual(
+      result.current.playerSetup.map(cfg => !!cfg.isComputer),
+    )
   })
 
   it('overallTotals includes column bonus from homogeneous matched columns', () => {
@@ -333,6 +386,7 @@ describe('useGameState', () => {
       result.current.__setInitialFlips([true, true])
       result.current.setCurrentPlayer(1)
     })
+    await flushAsync()
     // Placeholder assertion until discard injection helper added
     expect(result.current.players[1].cards[0].value).toBe(5)
   })
@@ -376,7 +430,7 @@ describe('useGameState', () => {
       result.current.setCurrentPlayer(1)
     })
     // Allow AI effect to run
-    await act(async () => { await Promise.resolve(); await Promise.resolve() })
+    await flushAsync(2)
     const comp = result.current.players[1]
     const has2 = comp.cards.some(c => c.faceUp && c.value === 2)
     expect(has2).toBe(true)
@@ -398,9 +452,7 @@ describe('useGameState', () => {
       result.current.__setInitialFlips([false,true])
     })
     // Let AI effects cycle enough times: first to draw, second to process drawn high card
-    for (let i=0;i<4;i++) {
-      await act(async () => { await Promise.resolve() })
-    }
+    await flushAsync(4)
     expect(result.current.drawnCard).toBeNull()
     // High card should have been discarded; ensure discard pile contains 12
     expect(result.current.discardPile.map(c => c.value)).toContain(12)
@@ -433,9 +485,7 @@ describe('useGameState', () => {
     const baselineHidden = () => result.current.players[1].cards.filter(c => !c.faceUp).length
     const baselineFaceUpSet = new Set(result.current.players[1].cards.map((c,i)=> c.faceUp ? i : null).filter(i=>i!==null))
     // Run several effect cycles to allow draw + evaluation + potential forced reveal
-    for (let i=0;i<12;i++) {
-      await act(async () => { await Promise.resolve() })
-    }
+    await flushAsync(12)
     const computer = result.current.players[1]
     const hiddenCount = baselineHidden()
     const newFaceUpIndices = computer.cards
@@ -475,7 +525,7 @@ describe('useGameState', () => {
       result.current.__setInitialFlips([false,true])
       result.current.setCurrentPlayer(1)
     })
-    await act(async () => { await Promise.resolve(); await Promise.resolve() })
+    await flushAsync(2)
     expect(result.current.turnComplete[1]).toBe(true)
     // Ensure the single facedown remains unflipped due to skip
     const fd = result.current.players[1].cards.filter(c => !c.faceUp).length
@@ -509,9 +559,7 @@ describe('useGameState', () => {
     // Allow cycles; capture initial discard length and hidden count
     const initialDiscardLen = result.current.discardPile.length
     const initialHidden = result.current.players[1].cards.filter(c => !c.faceUp).length
-    for (let i=0;i<10;i++) {
-      await act(async () => { await Promise.resolve() })
-    }
+    await flushAsync(10)
     const afterHidden = result.current.players[1].cards.filter(c => !c.faceUp).length
     const discardGrew = result.current.discardPile.length > initialDiscardLen
     // With skip disabled, AI should not have ended turn before at least attempting a draw+process cycle.
@@ -522,7 +570,7 @@ describe('useGameState', () => {
     }
   })
 
-  it('runningTotalsWithBonus includes -10 bonus for two revealed matched columns', () => {
+  it('runningTotalsWithBonus includes -10 bonus for two revealed matched columns', async () => {
     const deck = createTestDeck()
     const { result } = renderHook(() => useGameState({ disableDelays: true, initialDeck: deck, enablePersistence: false, exposeTestHelpers: true }))
     act(() => {
@@ -545,6 +593,7 @@ describe('useGameState', () => {
         flippedCount:8,
       }))
     })
+    await flushAsync()
     // raw without bonus: matched columns canceled (0), others: 8+7+6+9 = 30; bonus -10 => 20
     expect(result.current.runningTotalsWithBonus[0]).toBe(20)
   })
@@ -557,17 +606,14 @@ describe('useGameState', () => {
       finishPlayer(result, 1)
       result.current.setRoundOver(true)
     })
-    // Allow score finalize
-    act(() => {})
+    // Allow score finalize to settle before starting next hole
+    await flushAsync()
     act(() => {
       result.current.startNextHole()
       result.current.setCurrentPlayer(1)
     })
-    // After starting next hole, computer should have initialFlips[1] true and attempt a draw within a couple cycles
     expect(result.current.initialFlips[1]).toBe(true)
-    for (let i=0;i<6;i++) {
-      await act(async () => { await Promise.resolve() })
-    }
+    await flushAsync(6)
     // Either drew a card or picked up discard; discard pile might be empty early; check firstTurnDraw or drawnCard
     const acted = result.current.drawnCard !== null || result.current.firstTurnDraw[1]
     expect(acted).toBe(true)
@@ -605,7 +651,7 @@ describe('useGameState', () => {
     expect(stored.currentHole).toBe(2)
   })
 
-  it('auto advances turn when current player turnComplete becomes true', () => {
+  it('auto advances turn when current player turnComplete becomes true', async () => {
     const deck = createTestDeck()
     const { result } = renderHook(() => useGameState({ disableDelays: true, initialDeck: deck, exposeTestHelpers: true, enablePersistence: false }))
     act(() => {
@@ -616,9 +662,9 @@ describe('useGameState', () => {
       // Force turn complete flag for current player
       result.current.__setTurnComplete(tc => tc.map((v, i) => (i === startingPlayer ? true : v)))
     })
-    // Allow effect cycle
-    act(() => {})
-    expect(result.current.currentPlayer).toBe((startingPlayer + 1) % 2)
+    await waitFor(() => {
+      expect(result.current.currentPlayer).toBe((startingPlayer + 1) % result.current.players.length)
+    })
   })
 
   it('shows seeded discard pile card faceUp with value', () => {
@@ -646,9 +692,7 @@ describe('useGameState', () => {
     })
     const postDrawDebug = result.current.__debug ? result.current.__debug() : null
       // (debug logs removed)
-    await act(async () => {
-      await Promise.resolve()
-    })
+    await flushAsync()
     drawnValue = result.current.drawnCard?.value
     expect(typeof drawnValue).toBe('number')
     act(() => {
@@ -672,13 +716,13 @@ describe('useGameState', () => {
       flipTwoCards(result)
     })
     // Allow initialFlips sync
-    await act(async () => { await Promise.resolve() })
+    await flushAsync()
     const originalValues = result.current.players[0].cards.map(c => c.value)
     const originalFirstCardValue = originalValues[0]
     expect(typeof originalFirstCardValue).toBe('number')
     // Draw a card
     act(() => { result.current.drawCard() })
-    await act(async () => { await Promise.resolve() })
+    await flushAsync()
     // Replace index 0
     act(() => { result.current.handleCardClick(0, 0) })
     const top = result.current.discardTop
@@ -700,20 +744,20 @@ describe('useGameState', () => {
     act(() => { result.current.drawCard() })
     const seqPostDraw = result.current.__debug ? result.current.__debug() : null
       // (debug logs removed)
-    await act(async () => { await Promise.resolve() })
+    await flushAsync()
     firstDrawValue = result.current.drawnCard?.value
     expect(typeof firstDrawValue).toBe('number')
     act(() => { result.current.discardDrawnCard() })
     firstDiscardValue = result.current.discardPile[0].value
     act(() => { result.current.drawCard() })
-    await act(async () => { await Promise.resolve() })
+    await flushAsync()
     secondDrawValue = result.current.drawnCard?.value
     replacedCardValue = result.current.players[0].cards[0].value
     act(() => { result.current.handleCardClick(0, 0) })
     // After first discard, top should equal firstDrawValue
     expect(firstDiscardValue).toBe(firstDrawValue)
     // After replace, top should become original replaced card value, not second drawn card
-    await act(async () => { await Promise.resolve() })
+    await flushAsync()
     const currentTop = result.current.discardTop.value
     expect(typeof currentTop).toBe('number')
     expect(currentTop).toBe(replacedCardValue)
