@@ -118,6 +118,7 @@ export function useGameState(config = {}) {
   const [deckRest, setDeckRest] = useState(initialDeal.rest)
   const [setupComplete, setSetupComplete] = useState(false)
   const [currentPlayer, setCurrentPlayer] = useState(0)
+  const [holeStartingPlayer, setHoleStartingPlayer] = useState(0)
   const [drawnCard, setDrawnCard] = useState(null)
   const [discardPile, setDiscardPile] = useState([])
   const [discardTop, setDiscardTop] = useState(null)
@@ -158,6 +159,7 @@ export function useGameState(config = {}) {
       setDiscardTop(null)
       resetTurnState(clamped)
       setCurrentPlayer(0)
+      setHoleStartingPlayer(0)
       setFinalTurnPlayer(null)
       setFinalTurnPending(false)
       setFinalTurnQueue([])
@@ -211,7 +213,9 @@ export function useGameState(config = {}) {
       setFinalTurnPending(false)
       prevAllFaceUpRef.current = Array(playerSetup.length).fill(false)
       const startingHuman = playerSetup.findIndex(p => !p.isComputer)
-      setCurrentPlayer(startingHuman === -1 ? 0 : startingHuman)
+      const initialStarter = startingHuman === -1 ? 0 : startingHuman
+      setHoleStartingPlayer(initialStarter)
+      setCurrentPlayer(initialStarter)
     },
     [deckRest, discardTop, playerSetup],
   )
@@ -745,6 +749,7 @@ export function useGameState(config = {}) {
     if (currentHole >= 9) return
     const totalPlayers = playerSetup.length
     if (totalPlayers === 0) return
+    const nextStarter = totalPlayers === 0 ? 0 : ((holeStartingPlayer + 1) % totalPlayers)
     const newDeck = buildDeck()
     const { players: freshPlayers, rest } = dealPlayersFromDeck(newDeck, totalPlayers)
     const seededPlayers = freshPlayers.map((player, idx) =>
@@ -774,20 +779,20 @@ export function useGameState(config = {}) {
     setFinalTurnPending(false)
     setFinalTurnQueue([])
     setCurrentHole(h => h + 1)
-    const normalizedCurrent = currentPlayer >= totalPlayers ? 0 : currentPlayer
-    setCurrentPlayer(normalizedCurrent)
+    setHoleStartingPlayer(nextStarter)
+    setCurrentPlayer(nextStarter)
     setTimeout(() => {
-      if (!disableComputerAuto && playerSetup[normalizedCurrent]?.isComputer) {
+      if (!disableComputerAuto && playerSetup[nextStarter]?.isComputer) {
         computerTurn()
       }
     }, 0)
   }, [
     currentHole,
-    currentPlayer,
     computerTurn,
     disableComputerAuto,
     playerSetup,
     resetTurnState,
+    holeStartingPlayer,
   ])
 
   // Running totals including any bonuses that are already guaranteed (i.e., fully revealed matched columns groups).
@@ -890,6 +895,10 @@ export function useGameState(config = {}) {
       setPlayerSetup(nextSetup)
       setSetupComplete(!!parsed.setupComplete)
       setCurrentPlayer(clampedCurrent)
+      const savedHoleStarter = typeof parsed.holeStartingPlayer === 'number'
+        ? Math.min(Math.max(parsed.holeStartingPlayer, 0), inferredCount - 1)
+        : clampedCurrent
+      setHoleStartingPlayer(savedHoleStarter)
       setPlayers(nextPlayers)
       setDeckRest(nextDeckRest)
       setDrawnCard(nextDrawnCard)
@@ -935,6 +944,7 @@ export function useGameState(config = {}) {
         currentHole,
         holeScores,
         playerCount,
+        holeStartingPlayer,
       }
       localStorage.setItem(persistenceKey, JSON.stringify(snapshot))
     } catch (e) {
@@ -1001,6 +1011,7 @@ export function useGameState(config = {}) {
     clearSavedGame,
     finalTurnPlayer,
     finalTurnPending,
+    deckCount: deckRest.length,
     ...testHelpers,
   }
 }

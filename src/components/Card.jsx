@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useMemo } from 'react'
 
 /**
  * Card component: purely visual card flip.
@@ -11,27 +11,12 @@ import { useEffect, useRef } from 'react'
  */
 export default function Card({ card, onClick, interactive, width = 52, height = 78, flipDelay = 0 }) {
   const faceUp = !!card?.faceUp
-  const displayValue = faceUp ? card.value : card?.value
-  const ref = useRef(null)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    // Toggle class to trigger CSS transition when face state changes
-    if (faceUp) {
-      requestAnimationFrame(() => {
-        el.classList.add('card-flipped')
-      })
-    } else {
-      el.classList.remove('card-flipped')
-    }
-  }, [faceUp])
+  const displayValue = faceUp ? card.value : '?'
+  const rotation = useMemo(() => (faceUp ? 180 : 0), [faceUp])
 
   return (
     <div
-      ref={ref}
       onClick={onClick}
-      className="flip-card"
       style={{
         width,
         height,
@@ -40,6 +25,7 @@ export default function Card({ card, onClick, interactive, width = 52, height = 
         perspective: 800,
         transition: 'transform 0.42s cubic-bezier(0.22,0.61,0.36,1)',
         transformStyle: 'preserve-3d',
+        transform: `rotateY(${rotation}deg)`,
         // Delay only when turning faceUp (stagger). Use inline animation delay via style.
         transitionDelay: faceUp ? `${flipDelay}ms` : '0ms',
       }}
@@ -54,7 +40,6 @@ export default function Card({ card, onClick, interactive, width = 52, height = 
           borderRadius: 8,
           border: '1px solid #0f172a',
           overflow: 'hidden',
-          boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.08)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -118,10 +103,6 @@ export default function Card({ card, onClick, interactive, width = 52, height = 
       >
         {displayValue}
       </div>
-      <style>{`
-        .flip-card { transform: rotateY(${faceUp ? 180 : 0}deg); }
-        .flip-card.card-flipped { transform: rotateY(180deg); }
-      `}</style>
     </div>
   )
 }

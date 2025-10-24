@@ -49,6 +49,7 @@ export default function App() {
     clearSavedGame,
     finalTurnPlayer,
     finalTurnPending,
+    deckCount,
   } = useGameState({ aiSpeed })
 
   const currentInitialFlips = initialFlips[currentPlayer] ?? false
@@ -156,6 +157,7 @@ export default function App() {
             onDraw={drawCard}
             onPickUp={pickUpDiscard}
             onDiscard={discardDrawnCard}
+              deckCount={deckCount}
           />
         </div>
         {renderRow(bottomPlayers, topCount, 'bottom')}
@@ -163,12 +165,22 @@ export default function App() {
     )
   }
 
+  const containerClass = [
+    'flex flex-col items-center w-full',
+    setupComplete ? 'justify-start pt-12 md:pt-16' : 'justify-start pt-12',
+    'min-h-screen p-4',
+  ].join(' ')
+
+  const containerStyle = {
+    backgroundColor: '#f8f6f1',
+  }
+
   return (
     <div>
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-green-700 to-green-900 p-4">
+      <div className={containerClass} style={containerStyle}>
         {!setupComplete ? (
           <>
-            <h1 className="text-white text-4xl font-bold mb-6 text-center tracking-wide">Golf</h1>
+            <h1 className="text-white text-4xl font-bold mb-4 text-center tracking-wide">Golf</h1>
             <PlayerSetup
               playerSetup={playerSetup}
               playerCount={playerCount}
@@ -184,8 +196,10 @@ export default function App() {
               style={{
                 color: currentPlayerConfig.color || '#fff',
                 fontWeight: 'bold',
-                marginBottom: 8,
+                marginBottom: 6,
+                marginTop: 0,
                 fontSize: 22,
+                textShadow: '0 1px 1px rgba(0,0,0,0.45), 0 -1px 1px rgba(0,0,0,0.35), 1px 0 1px rgba(0,0,0,0.35), -1px 0 1px rgba(0,0,0,0.35)',
               }}
             >
               {(currentPlayerConfig.name ||
@@ -261,8 +275,8 @@ export default function App() {
                   <option value="fast">Fast</option>
                 </select>
               </label>
-              <span style={{ color: '#ddd', fontSize: 12, fontStyle: 'italic' }}>
-                (affects computer pacing only)
+              <span style={{ color: '#080000ff', fontSize: 12, fontStyle: 'italic' }}>
+                (affects computer player only)
               </span>
             </div>
           </>

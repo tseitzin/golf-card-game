@@ -75,12 +75,14 @@ export function explainScore(cards) {
   let minusFiveCount = cards.reduce((acc, c) => acc + (c.value === -5 ? 1 : 0), 0)
   const columns = []
   const matchedColumnsByValue = {}
+  let matchedColumnTotal = 0
 
   for (let col = 0; col < 4; col++) {
     const top = cards[col]
     const bottom = cards[col + 4]
     if (top.value === bottom.value && top.value !== -5) {
       matchedColumnsByValue[top.value] = (matchedColumnsByValue[top.value] || 0) + 1
+      matchedColumnTotal += 1
       columns.push({ top: top.value, bottom: bottom.value, canceled: true, isMinusFivePair: false, value: top.value })
       continue
     }
@@ -103,7 +105,8 @@ export function explainScore(cards) {
 
   return {
     rawScore,
-    matchingColumnCount: largestGroup, // rename meaning: largest homogeneous matched group size
+    matchingColumnCount: matchedColumnTotal,
+    matchingColumnLargestGroup: largestGroup,
     minusFiveCount,
     bonus,
     final: rawScore + bonus,

@@ -7,6 +7,7 @@ export default function DrawDiscardArea({
   onDraw,
   onPickUp,
   onDiscard,
+  deckCount,
 }) {
   const drawPileClasses = [
     'card-transition-base',
@@ -19,25 +20,30 @@ export default function DrawDiscardArea({
   ].filter(Boolean).join(' ')
   return (
     <div style={{ display: 'flex', gap: '24px', marginBottom: 0, justifyContent: 'center' }}>
-      <div
-        onClick={canDraw ? onDraw : undefined}
-        style={{
-          width: '60px',
-          height: '90px',
-          background: drawnCard ? '#FFD600' : '#333',
-          color: drawnCard ? '#14532D' : '#eee',
-          border: '2px solid #333',
-          borderRadius: '12px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontWeight: 'bold',
-          fontSize: '20px',
-          cursor: canDraw ? 'pointer' : 'not-allowed',
-        }}
-        className={drawPileClasses}
-      >
-        {drawnCard ? drawnCard.value : '?'}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+        <div
+          onClick={canDraw ? onDraw : undefined}
+          style={{
+            width: '60px',
+            height: '90px',
+            background: drawnCard ? '#FFD600' : '#333',
+            color: drawnCard ? '#14532D' : '#eee',
+            border: '2px solid #333',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 'bold',
+            fontSize: '20px',
+            cursor: canDraw ? 'pointer' : 'not-allowed',
+          }}
+          className={drawPileClasses}
+        >
+          {drawnCard ? drawnCard.value : '?'}
+        </div>
+        <span style={{ fontSize: 12, color: '#1f2937', fontWeight: 600 }}>
+          {deckCount ?? 0} card{deckCount === 1 ? '' : 's'} left
+        </span>
       </div>
       <div
         onClick={canPickUp ? onPickUp : undefined}

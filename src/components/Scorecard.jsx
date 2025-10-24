@@ -16,6 +16,21 @@ export default function Scorecard({ holeScores, overallTotals, currentHole, play
   const openRecord = open ? findRecord(open.hole) : null
   const openBreakdown = openRecord ? openRecord.breakdowns?.[open.playerIndex] : null
 
+  const totalsByHole = (() => {
+    const cumulative = Array(playerNames.length).fill(0)
+    const sorted = [...holeScores].sort((a, b) => a.hole - b.hole)
+    const map = {}
+    sorted.forEach(record => {
+      const running = record.scores.map((score, idx) => {
+        const value = typeof score === 'number' ? score : 0
+        cumulative[idx] += value
+        return cumulative[idx]
+      })
+      map[record.hole] = running
+    })
+    return map
+  })()
+
   return (
     <div style={{
       background: '#fff',
@@ -49,6 +64,9 @@ export default function Scorecard({ holeScores, overallTotals, currentHole, play
                 {playerNames.map((_, pi) => {
                   const isOpen = open && open.hole === holeNumber && open.playerIndex === pi
                   const hasRecord = !!record
+                  const holeScore = record ? record.scores[pi] : null
+                  const runningTotal = totalsByHole[holeNumber]?.[pi]
+                  const showRunning = runningTotal !== undefined && holeNumber > 1
                   return (
                     <td
                       key={pi}
@@ -63,7 +81,16 @@ export default function Scorecard({ holeScores, overallTotals, currentHole, play
                         position: 'relative'
                       }}
                     >
-                      {record ? record.scores[pi] : ''}
+                      {holeScore !== null && holeScore !== undefined ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                          <span style={{ fontWeight: 600 }}>{holeScore}</span>
+                          {showRunning && (
+                            <span style={{ fontSize: 11, color: '#4b5563' }}>
+                               {runningTotal}
+                            </span>
+                          )}
+                        </div>
+                      ) : ''}
                     </td>
                   )
                 })}

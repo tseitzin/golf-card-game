@@ -17,6 +17,8 @@ export default function PlayerBoard({
     prevFaceUpRef.current = player?.cards?.map(c => c.faceUp) || []
   }, [player])
 
+  const cards = player?.cards || Array(8).fill(null)
+
   return (
     <div
       style={{
@@ -29,7 +31,7 @@ export default function PlayerBoard({
     >
       <div
         style={{
-          color: color,
+          color,
           fontWeight: 'bold',
           fontSize: 16,
           textAlign: 'center',
@@ -59,23 +61,46 @@ export default function PlayerBoard({
           boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
         }}
       >
-        {(player?.cards || Array(8).fill(null)).map((card, idxCard) => {
+        {cards.map((card, idxCard) => {
           const isInteractive = card ? canInteractWithCard(index, idxCard) : false
+
           // Stagger flips slightly for computer-controlled seats when cards auto-reveal.
           let flipDelay = 0
           const prev = prevFaceUpRef.current[idxCard]
           if (isComputer && card?.faceUp && prev === false) {
-            // Stagger based on how many other newly flipped in this pass (simple idx weighting)
             flipDelay = (idxCard % 4) * 40
           }
+
+          const partnerIndex = idxCard < 4 ? idxCard + 4 : idxCard - 4
+          const partnerCard = cards[partnerIndex]
+          const isMatchPair =
+            !!card &&
+            !!partnerCard &&
+            card.faceUp &&
+            partnerCard.faceUp &&
+            card.value === partnerCard.value
+          const isBottomCard = idxCard >= 4
+          const shouldSlide = isBottomCard && isMatchPair
+
+          const wrapperStyle = {
+            transition: 'transform 0.3s ease',
+            transform: shouldSlide ? 'translateY(-40px)' : 'translateY(0)',
+            zIndex: shouldSlide ? 3 : 1,
+            position: 'relative',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }
+
           return (
-            <Card
-              key={card ? card.id : idxCard}
-              card={card}
-              interactive={isInteractive}
-              onClick={() => onCardClick?.(index, idxCard)}
-              flipDelay={flipDelay}
-            />
+            <div key={card ? card.id : idxCard} style={wrapperStyle}>
+              <Card
+                card={card}
+                interactive={isInteractive}
+                onClick={() => onCardClick?.(index, idxCard)}
+                flipDelay={flipDelay}
+              />
+            </div>
           )
         })}
       </div>

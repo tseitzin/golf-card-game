@@ -10,14 +10,34 @@ export default function PlayerSetup({
     <form
       onSubmit={onSubmit}
       style={{
-        background: '#fff',
-        borderRadius: 16,
-        padding: 32,
-        marginBottom: 32,
-        boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-        maxWidth: 760,
+        position: 'relative',
+        overflow: 'hidden',
+        backgroundColor: 'rgba(255,255,255,0.9)',
+        backgroundImage: [
+          'radial-gradient(circle at top left, rgba(34,197,94,0.18), transparent 55%)',
+          'radial-gradient(circle at bottom right, rgba(56,189,248,0.16), transparent 50%)',
+        ].join(', '),
+        borderRadius: 20,
+        padding: '36px 42px',
+        marginBottom: 36,
+        boxShadow: '0 18px 40px rgba(0,0,0,0.25)',
+        maxWidth: 780,
+        backdropFilter: 'blur(8px)',
+        border: '1px solid rgba(255,255,255,0.6)',
       }}
     >
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: '-140px -140px auto auto',
+          width: 260,
+          height: 260,
+          background: 'radial-gradient(circle at center, rgba(250,204,21,0.45), transparent 65%)',
+          opacity: 0.65,
+          pointerEvents: 'none',
+        }}
+      />
       <h2 style={{ fontWeight: 'bold', fontSize: 24, marginBottom: 16 }}>Player Setup</h2>
       <div
         style={{
@@ -28,7 +48,7 @@ export default function PlayerSetup({
           flexWrap: 'wrap',
         }}
       >
-        <label style={{ fontWeight: 'bold' }}>Number of Players (2–6):</label>
+        <label style={{ fontWeight: 'bold', color: '#0f172a' }}>Number of Players (2–6):</label>
         <input
           type="number"
           min={2}
@@ -39,12 +59,12 @@ export default function PlayerSetup({
             width: 90,
             padding: '8px 12px',
             borderRadius: 6,
-            border: '1px solid #cbd5f5',
+            border: '1px solid rgba(148, 163, 184, 0.55)',
             fontWeight: 600,
             textAlign: 'center',
           }}
         />
-        <span style={{ fontSize: 12, color: '#4b5563' }}>At least one player must remain human.</span>
+        <span style={{ fontSize: 12, color: '#1f2937', opacity: 0.75 }}>At least one player must remain human.</span>
       </div>
       <div
         style={{
@@ -64,8 +84,8 @@ export default function PlayerSetup({
               background: '#f8fafc',
             }}
           >
-            <div style={{ fontWeight: 'bold', marginBottom: 8 }}>Player {idx + 1}</div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>Name</label>
+            <div style={{ fontWeight: 'bold', marginBottom: 8, color: '#0f172a' }}>Player {idx + 1}</div>
+            <label style={{ display: 'block', fontWeight: 600, marginBottom: 4, color: '#1f2937' }}>Name</label>
             <input
               type="text"
               value={player.name}
@@ -74,12 +94,12 @@ export default function PlayerSetup({
               style={{
                 padding: 8,
                 borderRadius: 6,
-                border: '1px solid #cbd5f5',
+                border: '1px solid rgba(148, 163, 184, 0.55)',
                 marginBottom: 10,
                 width: '100%',
               }}
             />
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>Color</label>
+            <label style={{ display: 'block', fontWeight: 600, marginBottom: 4, color: '#1f2937' }}>Color</label>
             <input
               type="color"
               value={player.color}
@@ -92,7 +112,7 @@ export default function PlayerSetup({
                 marginBottom: 12,
               }}
             />
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>Role</label>
+            <label style={{ display: 'block', fontWeight: 600, marginBottom: 4, color: '#1f2937' }}>Role</label>
             <select
               value={player.isComputer ? 'computer' : 'human'}
               onChange={e => onChange(idx, 'isComputer', e.target.value === 'computer')}
@@ -100,7 +120,7 @@ export default function PlayerSetup({
                 width: '100%',
                 padding: '8px 10px',
                 borderRadius: 6,
-                border: '1px solid #cbd5f5',
+                border: '1px solid rgba(148, 163, 184, 0.55)',
                 background: '#fff',
                 fontWeight: 600,
               }}
