@@ -64,6 +64,12 @@ const autoFlipComputerCards = (player, flips = 2) => {
   }
 }
 
+const revealAllCardsForPlayer = player => {
+  const revealedCards = player.cards.map(c => (c.faceUp ? c : { ...c, faceUp: true }))
+  const flippedCount = revealedCards.filter(c => c.faceUp).length
+  return { ...player, cards: revealedCards, flippedCount }
+}
+
 function computeExpectedUnknownValue(players, discardPile, drawnCard) {
   const remaining = new Map(BASE_COUNTS)
   const dec = val => {
@@ -630,15 +636,18 @@ export function useGameState(config = {}) {
 
   const finalizeRound = useCallback(() => {
     setPlayers(ps =>
-      ps.map(p => ({
-        ...p,
-        cards: p.cards.map(c => (c.faceUp ? c : { ...c, faceUp: true })),
-      })),
+      ps.map(p => revealAllCardsForPlayer(p)),
     )
     setRoundOver(true)
     setFinalTurnPlayer(null)
     setFinalTurnPending(false)
     setFinalTurnQueue([])
+  }, [])
+
+  const revealRemainingCards = useCallback(index => {
+    setPlayers(prev => prev.map((player, i) => (i === index ? revealAllCardsForPlayer(player) : player)))
+    setMustFlipAfterDiscard(prev => prev.map((v, i) => (i === index ? false : v)))
+    setInitialFlips(prev => prev.map((v, i) => (i === index ? true : v)))
   }, [])
 
   useEffect(() => {
@@ -686,6 +695,10 @@ export function useGameState(config = {}) {
     prevAllFaceUpRef.current = playerFlippedAll
 
     if (finalTurnPlayer !== null && turnComplete[finalTurnPlayer] && !finalTurnPending) {
+      if (hasHidden(finalTurnPlayer)) {
+        revealRemainingCards(finalTurnPlayer)
+        return
+      }
       if (finalTurnQueue.length > 0) {
         let next = null
         let remaining = [...finalTurnQueue]
@@ -714,6 +727,7 @@ export function useGameState(config = {}) {
     finalTurnPending,
     finalTurnQueue,
     finalizeRound,
+    revealRemainingCards,
   ])
 
   // Auto-advance turn when a player's turn completes and not in final turn resolution.
