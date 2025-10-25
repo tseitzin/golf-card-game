@@ -8,11 +8,13 @@ import { useMemo } from 'react'
  *  - interactive: boolean (adds pointer cursor)
  *  - width / height (defaults 52x78)
  *  - flipDelay: optional ms to delay initial flip animation (used for staggered computer auto-flips)
+ *  - highlighted: boolean (light red face when card is part of bonus pair)
  */
-export default function Card({ card, onClick, interactive, width = 52, height = 78, flipDelay = 0 }) {
+export default function Card({ card, onClick, interactive, width = 52, height = 78, flipDelay = 0, highlighted = false }) {
   const faceUp = !!card?.faceUp
   const displayValue = faceUp ? card.value : '?'
   const rotation = useMemo(() => (faceUp ? 180 : 0), [faceUp])
+  const highlightActive = faceUp && highlighted
 
   return (
     <div
@@ -89,9 +91,9 @@ export default function Card({ card, onClick, interactive, width = 52, height = 
           inset: 0,
           backfaceVisibility: 'hidden',
           transform: 'rotateY(180deg)',
-          background: '#eee',
-          color: '#222',
-          border: '1px solid #333',
+          background: highlightActive ? '#fee2e2' : '#eee',
+          color: highlightActive ? '#7f1d1d' : '#222',
+          border: highlightActive ? '1px solid #f87171' : '1px solid #333',
           borderRadius: 8,
           display: 'flex',
           alignItems: 'center',

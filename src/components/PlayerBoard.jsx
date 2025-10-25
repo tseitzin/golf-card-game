@@ -19,6 +19,36 @@ export default function PlayerBoard({
 
   const cards = player?.cards || Array(8).fill(null)
 
+  const highlightIndices = (() => {
+    const byValue = {}
+    for (let col = 0; col < 4; col++) {
+      const top = cards[col]
+      const bottom = cards[col + 4]
+      if (
+        top &&
+        bottom &&
+        top.faceUp &&
+        bottom.faceUp &&
+        top.value === bottom.value &&
+        top.value !== -5
+      ) {
+        const value = top.value
+        if (!byValue[value]) byValue[value] = []
+        byValue[value].push(col)
+      }
+    }
+    const indices = new Set()
+    Object.values(byValue).forEach(columnIndices => {
+      if (columnIndices.length >= 2) {
+        columnIndices.forEach(colIdx => {
+          indices.add(colIdx)
+          indices.add(colIdx + 4)
+        })
+      }
+    })
+    return indices
+  })()
+
   return (
     <div
       style={{
@@ -81,6 +111,7 @@ export default function PlayerBoard({
             card.value === partnerCard.value
           const isBottomCard = idxCard >= 4
           const shouldSlide = isBottomCard && isMatchPair
+          const highlightCard = highlightIndices.has(idxCard)
 
           const wrapperStyle = {
             transition: 'transform 0.3s ease',
@@ -99,6 +130,7 @@ export default function PlayerBoard({
                 interactive={isInteractive}
                 onClick={() => onCardClick?.(index, idxCard)}
                 flipDelay={flipDelay}
+                highlighted={highlightCard}
               />
             </div>
           )
