@@ -56,22 +56,31 @@ describe('Scorecard', () => {
       />,
     )
 
-    expect(screen.getByText('Scorecard (Hole 2 / 9)')).toBeInTheDocument()
+    expect(screen.getByText('Play Nine: The Card Game of Golf')).toBeInTheDocument()
+
+    const roundTwoSubtotalRow = screen.getByText('Round 2 Subtotal').closest('tr')
+    expect(roundTwoSubtotalRow).toBeTruthy()
+    expect(within(roundTwoSubtotalRow).getByText('-11')).toBeInTheDocument()
+    expect(within(roundTwoSubtotalRow).getByText('9')).toBeInTheDocument()
+
+    const roundThreeSubtotalRow = screen.getByText('Round 3 Subtotal').closest('tr')
+    expect(roundThreeSubtotalRow).toBeTruthy()
+    expect(within(roundThreeSubtotalRow).getAllByText('--').length).toBeGreaterThan(0)
 
     const holeTwoRow = screen.getAllByRole('row').find(row => within(row).queryByText('2'))
     expect(holeTwoRow).toBeTruthy()
     const aliceCell = within(holeTwoRow).getByText(/-15/).closest('td')
     expect(aliceCell).toBeTruthy()
     expect(within(aliceCell).getByText('-15')).toBeInTheDocument()
-    expect(within(aliceCell).getByText('-11')).toBeInTheDocument()
+    expect(within(aliceCell).queryByText(/\(-11\)/)).not.toBeInTheDocument()
 
     fireEvent.click(aliceCell)
 
-    expect(screen.getByText('Hole 2 – Alice')).toBeInTheDocument()
-    const matchingLabel = screen.getByText('Matching Columns:')
+    expect(screen.getByText('Hole 2 - Alice')).toBeInTheDocument()
+    const matchingLabel = screen.getByText('Matching Columns')
     expect(matchingLabel).toBeInTheDocument()
     expect(within(matchingLabel.parentElement).getByText('2')).toBeInTheDocument()
-    const finalLabel = screen.getByText('Final:')
+    const finalLabel = screen.getByText('Final')
     expect(finalLabel).toBeInTheDocument()
     expect(within(finalLabel.parentElement).getByText('-15')).toBeInTheDocument()
 

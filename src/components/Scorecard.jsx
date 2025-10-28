@@ -1,7 +1,10 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 
+const TOTAL_HOLES = 9
 export default function Scorecard({ holeScores, overallTotals, currentHole, playerNames }) {
   const [open, setOpen] = useState(null) // { hole, playerIndex }
+  const holeColumnWidth = '15%'
+  const playerColumnWidth = `${((100 - 15) / Math.max(playerNames.length, 1)).toFixed(2)}%`
 
   const handleCellClick = (hole, playerIndex, record) => {
     if (!record) return
@@ -12,161 +15,202 @@ export default function Scorecard({ holeScores, overallTotals, currentHole, play
     }
   }
 
-  const findRecord = hole => holeScores.find(h => h.hole === hole)
-  const openRecord = open ? findRecord(open.hole) : null
+  const holeRecordMap = useMemo(() => {
+    const map = new Map()
+    holeScores.forEach(record => {
+      map.set(record.hole, record)
+    })
+    return map
+  }, [holeScores])
+
+  const openRecord = open ? holeRecordMap.get(open.hole) : null
   const openBreakdown = openRecord ? openRecord.breakdowns?.[open.playerIndex] : null
 
-  const totalsByHole = (() => {
+  const runningTotalsByHole = useMemo(() => {
     const cumulative = Array(playerNames.length).fill(0)
+    const totals = {}
     const sorted = [...holeScores].sort((a, b) => a.hole - b.hole)
-    const map = {}
     sorted.forEach(record => {
       const running = record.scores.map((score, idx) => {
         const value = typeof score === 'number' ? score : 0
         cumulative[idx] += value
         return cumulative[idx]
       })
-      map[record.hole] = running
+      totals[record.hole] = running
     })
-    return map
-  })()
+    return totals
+  }, [holeScores, playerNames.length])
+
+  const computedGameTotals = useMemo(() => {
+    const sums = Array(playerNames.length).fill(0)
+    holeScores.forEach(record => {
+      record.scores.forEach((score, idx) => {
+        if (typeof score === 'number') sums[idx] += score
+      })
+    })
+    return sums
+  }, [holeScores, playerNames.length])
+
+  const gameTotals = overallTotals?.length ? overallTotals : computedGameTotals
 
   return (
     <div style={{
       background: '#fff',
-      padding: 16,
+      padding: 20,
       borderRadius: 12,
-      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-      maxWidth: 520,
-      margin: '0 auto',
-      marginTop: 24,
-      fontSize: 14,
+      boxShadow: '0 3px 12px rgba(0,0,0,0.1)',
+      maxWidth: 700,
+      margin: '24px auto',
+      fontFamily: `'Segoe UI', Tahoma, Geneva, Verdana, sans-serif`,
       position: 'relative'
     }}>
-      <div style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 12 }}>Scorecard (Hole {currentHole} / 9)</div>
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <h2 style={{ margin: '0 0 16px', fontWeight: 600, textAlign: 'center' }}>Play Nine: The Card Game of Golf</h2>
+      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: 14, tableLayout: 'fixed' }}>
         <thead>
           <tr>
-            <th style={{ textAlign: 'left', padding: '4px 6px', borderBottom: '1px solid #ddd' }}>Hole</th>
-            {playerNames.map((n, i) => (
-              <th key={i} style={{ textAlign: 'right', padding: '4px 6px', borderBottom: '1px solid #ddd' }}>{n}</th>
+            <th style={{ border: '1px solid #ccc', padding: '10px', backgroundColor: '#f2f2f2', textAlign: 'left', width: holeColumnWidth }}>Hole</th>
+            {playerNames.map((name, idx) => (
+              <th
+                key={idx}
+                style={{ border: '1px solid #ccc', padding: '10px', backgroundColor: '#f2f2f2', width: playerColumnWidth }}
+              >
+                {name}
+              </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {[...Array(9)].map((_, hIdx) => {
-            const holeNumber = hIdx + 1
-            const record = findRecord(holeNumber)
-            const isCurrent = holeNumber === currentHole
+          {[...Array(TOTAL_HOLES)].map((_, holeIdx) => {
+            const holeNumber = holeIdx + 1
+            const record = holeRecordMap.get(holeNumber)
+            const isCurrentHole = holeNumber === currentHole
             return (
-              <tr key={holeNumber} style={{ background: isCurrent ? '#f0fdf4' : 'transparent' }}>
-                <td style={{ padding: '4px 6px', borderBottom: '1px solid #eee', fontWeight: isCurrent ? 'bold' : 'normal' }}>{holeNumber}</td>
-                {playerNames.map((_, pi) => {
-                  const isOpen = open && open.hole === holeNumber && open.playerIndex === pi
-                  const hasRecord = !!record
-                  const holeScore = record ? record.scores[pi] : null
-                  const runningTotal = totalsByHole[holeNumber]?.[pi]
-                  const showRunning = runningTotal !== undefined && holeNumber > 1
-                  return (
-                    <td
-                      key={pi}
-                      onClick={() => handleCellClick(holeNumber, pi, record)}
-                      title={hasRecord ? 'Click for breakdown' : ''}
-                      style={{
-                        padding: '4px 6px',
-                        textAlign: 'right',
-                        borderBottom: '1px solid #eee',
-                        cursor: hasRecord ? 'pointer' : 'default',
-                        background: isOpen ? '#eef2ff' : 'transparent',
-                        position: 'relative'
-                      }}
-                    >
-                      {holeScore !== null && holeScore !== undefined ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-                          <span style={{ fontWeight: 600 }}>{holeScore}</span>
-                          {showRunning && (
-                            <span style={{ fontSize: 11, color: '#4b5563' }}>
-                               {runningTotal}
-                            </span>
-                          )}
-                        </div>
-                      ) : ''}
-                    </td>
-                  )
-                })}
-              </tr>
+              <React.Fragment key={holeNumber}>
+                <tr style={{ background: isCurrentHole ? '#f8fff5' : 'transparent' }}>
+                  <td style={{ border: '1px solid #ccc', padding: '10px', fontWeight: isCurrentHole ? 600 : 400, textAlign: 'left', width: holeColumnWidth }}>{holeNumber}</td>
+                  {playerNames.map((_, playerIdx) => {
+                    const hasRecord = !!record
+                    const score = record ? record.scores[playerIdx] : null
+
+                    return (
+                      <td
+                        key={playerIdx}
+                        onClick={() => handleCellClick(holeNumber, playerIdx, record)}
+                        style={{
+                          border: '1px solid #ccc',
+                          padding: '10px',
+                          cursor: hasRecord ? 'pointer' : 'default',
+                          backgroundColor: open && open.hole === holeNumber && open.playerIndex === playerIdx ? '#eef4ff' : 'transparent',
+                          width: playerColumnWidth
+                        }}
+                        title={hasRecord ? 'Click for breakdown' : ''}
+                      >
+                        {hasRecord ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                            <span style={{ fontWeight: 600 }}>{score}</span>
+                          </div>
+                        ) : (
+                          <span style={{ color: '#bbb' }}>--</span>
+                        )}
+                      </td>
+                    )
+                  })}
+                </tr>
+                {holeNumber > 1 && (
+                  <tr style={{ fontWeight: 600, backgroundColor: '#f4f7fb' }}>
+                    <td style={{ border: '1px solid #ccc', padding: '10px', textAlign: 'left', width: holeColumnWidth }}>Round {holeNumber} Subtotal</td>
+                    {playerNames.map((_, playerIdx) => {
+                      const cumulative = runningTotalsByHole[holeNumber]?.[playerIdx]
+                      const hasSubtotal = typeof cumulative === 'number'
+                      return (
+                        <td
+                          key={`subtotal-${holeNumber}-${playerIdx}`}
+                          style={{ border: '1px solid #ccc', padding: '10px', width: playerColumnWidth }}
+                        >
+                          {hasSubtotal ? cumulative : <span style={{ color: '#bbb' }}>--</span>}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                )}
+              </React.Fragment>
             )
           })}
         </tbody>
         <tfoot>
-          <tr>
-            <td style={{ padding: '6px', borderTop: '1px solid #ddd', fontWeight: 'bold' }}>Total</td>
-            {overallTotals.map((t, i) => (
-              <td key={i} style={{ padding: '6px', textAlign: 'right', borderTop: '1px solid #ddd', fontWeight: 'bold' }}>{t}</td>
+          <tr style={{ fontWeight: 600, backgroundColor: '#d6f5d6' }}>
+            <td style={{ border: '1px solid #ccc', padding: '10px', textAlign: 'left', width: holeColumnWidth }}>Game Total</td>
+            {gameTotals.map((score, idx) => (
+              <td
+                key={idx}
+                style={{ border: '1px solid #ccc', padding: '10px', width: playerColumnWidth }}
+              >
+                {score}
+              </td>
             ))}
           </tr>
         </tfoot>
       </table>
+
       {open && openBreakdown && (
         <div style={{
           position: 'absolute',
-          top: 70,
-          right: 8,
-          width: 300,
-          background: '#1f2937',
-          color: '#f1f5f9',
-          borderRadius: 8,
-          padding: 12,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-          zIndex: 50
+          top: 60,
+          right: 20,
+          width: 320,
+          background: '#ffffff',
+          color: '#1f2933',
+          borderRadius: 12,
+          padding: 16,
+          boxShadow: '0 12px 30px rgba(15, 23, 42, 0.25)',
+          border: '1px solid #d1d5db'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-            <div style={{ fontWeight: '600' }}>Hole {open.hole} – {playerNames[open.playerIndex]}</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ fontWeight: 600, fontSize: 15 }}>Hole {open.hole} - {playerNames[open.playerIndex]}</div>
             <button
               onClick={() => setOpen(null)}
               style={{
                 background: 'transparent',
-                color: '#94a3b8',
+                color: '#64748b',
                 border: 'none',
                 cursor: 'pointer',
-                fontSize: 16,
+                fontSize: 18,
                 lineHeight: 1
               }}
               aria-label="Close breakdown"
             >×</button>
           </div>
-          <div style={{ fontSize: 12, marginBottom: 8, color: '#cbd5e1' }}>
-            Raw Score sums columns after cancellations. Bonus derives from matching columns and -5 set.
+          <div style={{ fontSize: 12, color: '#475569', marginBottom: 10 }}>
+            Breakdown of raw column score, bonuses, and final hole total.
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, fontSize: 13 }}>
-            <div style={{ color: '#a5b4fc' }}>Raw Score:</div><div>{openBreakdown.rawScore}</div>
-            <div style={{ color: '#a5b4fc' }}>Matching Columns:</div><div>{openBreakdown.matchingColumnCount}</div>
-            <div style={{ color: '#a5b4fc' }}>-5 Count:</div><div>{openBreakdown.minusFiveCount}</div>
-            <div style={{ color: '#a5b4fc' }}>Bonus:</div><div>{openBreakdown.bonus}</div>
-            <div style={{ color: '#a5b4fc', fontWeight: '600' }}>Final:</div><div style={{ fontWeight: '600' }}>{openBreakdown.final}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, fontSize: 13 }}>
+            <div style={{ color: '#0f172a' }}>Raw Score</div><div>{openBreakdown.rawScore}</div>
+            <div style={{ color: '#0f172a' }}>Matching Columns</div><div>{openBreakdown.matchingColumnCount}</div>
+            <div style={{ color: '#0f172a' }}>-5 Count</div><div>{openBreakdown.minusFiveCount}</div>
+            <div style={{ color: '#0f172a' }}>Bonus</div><div>{openBreakdown.bonus}</div>
+            <div style={{ color: '#0f172a', fontWeight: 600 }}>Final</div><div style={{ fontWeight: 600 }}>{openBreakdown.final}</div>
           </div>
-          <div style={{ marginTop: 10, fontSize: 12, fontWeight: 600, color: '#e2e8f0' }}>Columns</div>
-          <table style={{ width: '100%', marginTop: 4, fontSize: 12 }}>
+          <div style={{ marginTop: 12, fontSize: 12, fontWeight: 600, color: '#1f2937' }}>Columns</div>
+          <table style={{ width: '100%', marginTop: 6, fontSize: 12, borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ textAlign: 'left', color: '#94a3b8' }}>
-                <th style={{ padding: '2px 4px' }}>#</th>
-                <th style={{ padding: '2px 4px' }}>Top</th>
-                <th style={{ padding: '2px 4px' }}>Bot</th>
-                <th style={{ padding: '2px 4px' }}>Status</th>
+              <tr style={{ textAlign: 'left', color: '#6b7280' }}>
+                <th style={{ padding: '4px 6px', borderBottom: '1px solid #e2e8f0' }}>#</th>
+                <th style={{ padding: '4px 6px', borderBottom: '1px solid #e2e8f0' }}>Top</th>
+                <th style={{ padding: '4px 6px', borderBottom: '1px solid #e2e8f0' }}>Bottom</th>
+                <th style={{ padding: '4px 6px', borderBottom: '1px solid #e2e8f0' }}>Status</th>
               </tr>
             </thead>
             <tbody>
-              {openBreakdown.columns.map((col, i) => {
-                let status = ''
-                if (col.canceled) status = 'Matched (bonus)'
+              {openBreakdown.columns.map((col, idx) => {
+                let status = 'Active'
+                if (col.canceled) status = 'Matched Bonus'
                 else if (col.isMinusFivePair) status = '-5 Pair'
-                else status = 'Active'
                 return (
-                  <tr key={i} style={{ background: i % 2 ? '#334155' : 'transparent' }}>
-                    <td style={{ padding: '2px 4px' }}>{i + 1}</td>
-                    <td style={{ padding: '2px 4px' }}>{col.top}</td>
-                    <td style={{ padding: '2px 4px' }}>{col.bottom}</td>
-                    <td style={{ padding: '2px 4px', color: col.canceled ? '#22c55e' : col.isMinusFivePair ? '#facc15' : '#f1f5f9' }}>{status}</td>
+                  <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#f8fafc' : '#e2e8f0' }}>
+                    <td style={{ padding: '4px 6px' }}>{idx + 1}</td>
+                    <td style={{ padding: '4px 6px' }}>{col.top}</td>
+                    <td style={{ padding: '4px 6px' }}>{col.bottom}</td>
+                    <td style={{ padding: '4px 6px', color: col.canceled ? '#15803d' : col.isMinusFivePair ? '#b45309' : '#1f2937' }}>{status}</td>
                   </tr>
                 )
               })}

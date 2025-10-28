@@ -310,6 +310,52 @@ describe('useGameState', () => {
     )
   })
 
+  it('completes the turn when discarding with no hidden cards remaining', async () => {
+    const deck = createTestDeck()
+    const { result } = renderHook(() =>
+      useGameState({ disableDelays: true, initialDeck: deck, exposeTestHelpers: true, enablePersistence: false, disableComputerAuto: true }),
+    )
+
+    act(() => {
+      result.current.handleSetupSubmit(mockEvent())
+    })
+
+    // Ensure player 0 can draw
+    flipTwoCards(result)
+
+    act(() => {
+      result.current.drawCard()
+    })
+
+    expect(result.current.drawnCard).toBeTruthy()
+
+    act(() => {
+      result.current.__setPlayers(ps => ps.map((p, idx) => {
+        if (idx !== 0) return p
+        return {
+          ...p,
+          cards: p.cards.map(c => ({ ...c, faceUp: true })),
+          flippedCount: p.cards.length,
+        }
+      }))
+    })
+
+    await flushAsync()
+
+    act(() => {
+      result.current.setCurrentPlayer(0)
+    })
+
+    await flushAsync()
+
+    act(() => {
+      result.current.discardDrawnCard()
+    })
+
+    expect(result.current.mustFlipAfterDiscard[0]).toBe(false)
+    expect(result.current.turnComplete[0]).toBe(true)
+  })
+
   it('overallTotals includes column bonus from homogeneous matched columns', () => {
     const deck = createTestDeck()
     const { result } = renderHook(() => useGameState({ disableDelays: true, initialDeck: deck, exposeTestHelpers: true, enablePersistence: false }))

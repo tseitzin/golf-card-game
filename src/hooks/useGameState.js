@@ -249,7 +249,7 @@ export function useGameState(config = {}) {
     setDiscardTop(toDiscard)
     setDrawnCard(null)
     const faceDownCount = players[currentPlayer].cards.filter(c => !c.faceUp).length
-    if (faceDownCount === 1) {
+    if (faceDownCount <= 1) {
       setTurnComplete(prev => prev.map((v, i) => (i === currentPlayer ? true : v)))
       setMustFlipAfterDiscard(prev => prev.map((v, i) => (i === currentPlayer ? false : v)))
       setFirstTurnDraw(prev => prev.map((v, i) => (i === currentPlayer ? (playerSetup[i]?.isComputer ? true : false) : v)))
