@@ -11,7 +11,7 @@ import PropTypes from 'prop-types'
  *  - flipDelay: optional ms to delay initial flip animation (used for staggered computer auto-flips)
  *  - highlighted: boolean (light red face when card is part of bonus pair)
  */
-export default function Card({ card, onClick, interactive, width = 52, height = 78, flipDelay = 0, highlighted = false }) {
+export default function Card({ card, onClick, interactive, width = 52, height = 78, flipDelay = 0, highlighted = false, darkMode = false }) {
   const faceUp = !!card?.faceUp
   const displayValue = faceUp ? card.value : '?'
   const rotation = useMemo(() => (faceUp ? 180 : 0), [faceUp])
@@ -92,9 +92,9 @@ export default function Card({ card, onClick, interactive, width = 52, height = 
           inset: 0,
           backfaceVisibility: 'hidden',
           transform: 'rotateY(180deg)',
-          background: highlightActive ? '#fee2e2' : '#eee',
-          color: highlightActive ? '#7f1d1d' : '#222',
-          border: highlightActive ? '1px solid #f87171' : '1px solid #333',
+          background: highlightActive ? '#fee2e2' : (darkMode ? '#4a5568' : '#eee'),
+          color: highlightActive ? '#7f1d1d' : (darkMode ? '#fff' : '#222'),
+          border: highlightActive ? '1px solid #f87171' : (darkMode ? '1px solid #718096' : '1px solid #333'),
           borderRadius: 8,
           display: 'flex',
           alignItems: 'center',
@@ -122,4 +122,5 @@ Card.propTypes = {
   height: PropTypes.number,
   flipDelay: PropTypes.number,
   highlighted: PropTypes.bool,
+  darkMode: PropTypes.bool,
 }

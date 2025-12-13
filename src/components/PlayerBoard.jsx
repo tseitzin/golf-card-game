@@ -36,6 +36,7 @@ export default function PlayerBoard({
   color,
   isComputer,
   isCurrentPlayer,
+  darkMode,
   runningTotal,
   canInteractWithCard,
   onCardClick,
@@ -108,7 +109,7 @@ export default function PlayerBoard({
       <div
         style={{
           fontWeight: '600',
-          color: '#222',
+          color: darkMode ? '#e5e5e5' : '#222',
           textAlign: 'center',
           fontSize: 13,
         }}
@@ -171,6 +172,7 @@ export default function PlayerBoard({
                 onClick={() => onCardClick?.(index, idxCard)}
                 flipDelay={flipDelay}
                 highlighted={highlightCard}
+                darkMode={darkMode}
               />
             </div>
           )
@@ -196,6 +198,7 @@ PlayerBoard.propTypes = {
   color: PropTypes.string.isRequired,
   isComputer: PropTypes.bool,
   isCurrentPlayer: PropTypes.bool,
+  darkMode: PropTypes.bool,
   runningTotal: PropTypes.number,
   canInteractWithCard: PropTypes.func.isRequired,
   onCardClick: PropTypes.func,

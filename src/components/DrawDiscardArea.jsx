@@ -10,6 +10,7 @@ export default function DrawDiscardArea({
   onPickUp,
   onDiscard,
   deckCount,
+  darkMode,
 }) {
   const drawPileClasses = [
     'card-transition-base',
@@ -28,9 +29,9 @@ export default function DrawDiscardArea({
           style={{
             width: '60px',
             height: '90px',
-            background: drawnCard ? '#FFD600' : '#333',
-            color: drawnCard ? '#14532D' : '#eee',
-            border: '2px solid #333',
+            background: drawnCard ? '#FFD600' : (darkMode ? '#4a5568' : '#333'),
+            color: drawnCard ? '#14532D' : (darkMode ? '#fff' : '#eee'),
+            border: darkMode ? '2px solid #718096' : '2px solid #333',
             borderRadius: '12px',
             display: 'flex',
             alignItems: 'center',
@@ -43,7 +44,7 @@ export default function DrawDiscardArea({
         >
           {drawnCard ? drawnCard.value : '?'}
         </div>
-        <span style={{ fontSize: 12, color: '#1f2937', fontWeight: 600 }}>
+        <span style={{ fontSize: 12, color: darkMode ? '#e5e5e5' : '#1f2937', fontWeight: 600 }}>
           {deckCount ?? 0} card{deckCount === 1 ? '' : 's'} left
         </span>
       </div>
@@ -52,9 +53,9 @@ export default function DrawDiscardArea({
         style={{
           width: '60px',
           height: '90px',
-          background: '#fff',
-          color: '#14532D',
-          border: '2px solid #14532D',
+          background: darkMode ? '#4a5568' : '#fff',
+          color: darkMode ? '#fff' : '#14532D',
+          border: darkMode ? '2px solid #718096' : '2px solid #14532D',
           borderRadius: '12px',
           display: 'flex',
           alignItems: 'center',
@@ -108,4 +109,5 @@ DrawDiscardArea.propTypes = {
   onPickUp: PropTypes.func.isRequired,
   onDiscard: PropTypes.func.isRequired,
   deckCount: PropTypes.number,
+  darkMode: PropTypes.bool,
 }

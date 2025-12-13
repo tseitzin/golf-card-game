@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
 
 const TOTAL_HOLES = 9
-export default function Scorecard({ holeScores, overallTotals, currentHole, playerNames }) {
+export default function Scorecard({ holeScores, overallTotals, currentHole, playerNames, darkMode }) {
   const [open, setOpen] = useState(null) // { hole, playerIndex }
   const holeColumnWidth = '15%'
   const playerColumnWidth = `${((100 - 15) / Math.max(playerNames.length, 1)).toFixed(2)}%`
@@ -54,9 +54,18 @@ export default function Scorecard({ holeScores, overallTotals, currentHole, play
 
   const gameTotals = overallTotals?.length ? overallTotals : computedGameTotals
 
+  const cardBg = darkMode ? '#374151' : '#fff'
+  const headerBg = darkMode ? '#4b5563' : '#f2f2f2'
+  const textColor = darkMode ? '#e5e5e5' : '#000'
+  const borderColor = darkMode ? '#6b7280' : '#ccc'
+  const subtotalBg = darkMode ? '#4b5563' : '#f4f7fb'
+  const totalBg = darkMode ? '#065f46' : '#d6f5d6'
+  const currentRowBg = darkMode ? '#1e3a2e' : '#f8fff5'
+
   return (
     <div style={{
-      background: '#fff',
+      background: cardBg,
+      color: textColor,
       padding: 20,
       borderRadius: 12,
       boxShadow: '0 3px 12px rgba(0,0,0,0.1)',
@@ -69,11 +78,11 @@ export default function Scorecard({ holeScores, overallTotals, currentHole, play
       <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: 14, tableLayout: 'fixed' }}>
         <thead>
           <tr>
-            <th style={{ border: '1px solid #ccc', padding: '10px', backgroundColor: '#f2f2f2', textAlign: 'left', width: holeColumnWidth }}>Hole</th>
+            <th style={{ border: `1px solid ${borderColor}`, padding: '10px', backgroundColor: headerBg, textAlign: 'left', width: holeColumnWidth }}>Hole</th>
             {playerNames.map((name, idx) => (
               <th
                 key={idx}
-                style={{ border: '1px solid #ccc', padding: '10px', backgroundColor: '#f2f2f2', width: playerColumnWidth }}
+                style={{ border: `1px solid ${borderColor}`, padding: '10px', backgroundColor: headerBg, width: playerColumnWidth }}
               >
                 {name}
               </th>
@@ -87,8 +96,8 @@ export default function Scorecard({ holeScores, overallTotals, currentHole, play
             const isCurrentHole = holeNumber === currentHole
             return (
               <React.Fragment key={holeNumber}>
-                <tr style={{ background: isCurrentHole ? '#f8fff5' : 'transparent' }}>
-                  <td style={{ border: '1px solid #ccc', padding: '10px', fontWeight: isCurrentHole ? 600 : 400, textAlign: 'left', width: holeColumnWidth }}>{holeNumber}</td>
+                <tr style={{ background: isCurrentHole ? currentRowBg : 'transparent' }}>
+                  <td style={{ border: `1px solid ${borderColor}`, padding: '10px', fontWeight: isCurrentHole ? 600 : 400, textAlign: 'left', width: holeColumnWidth }}>{holeNumber}</td>
                   {playerNames.map((_, playerIdx) => {
                     const hasRecord = !!record
                     const score = record ? record.scores[playerIdx] : null
@@ -98,10 +107,10 @@ export default function Scorecard({ holeScores, overallTotals, currentHole, play
                         key={playerIdx}
                         onClick={() => handleCellClick(holeNumber, playerIdx, record)}
                         style={{
-                          border: '1px solid #ccc',
+                          border: `1px solid ${borderColor}`,
                           padding: '10px',
                           cursor: hasRecord ? 'pointer' : 'default',
-                          backgroundColor: open && open.hole === holeNumber && open.playerIndex === playerIdx ? '#eef4ff' : 'transparent',
+                          backgroundColor: open && open.hole === holeNumber && open.playerIndex === playerIdx ? (darkMode ? '#1e3a8a' : '#eef4ff') : 'transparent',
                           width: playerColumnWidth
                         }}
                         title={hasRecord ? 'Click for breakdown' : ''}
@@ -111,24 +120,24 @@ export default function Scorecard({ holeScores, overallTotals, currentHole, play
                             <span style={{ fontWeight: 600 }}>{score}</span>
                           </div>
                         ) : (
-                          <span style={{ color: '#bbb' }}>--</span>
+                          <span style={{ color: darkMode ? '#6b7280' : '#bbb' }}>--</span>
                         )}
                       </td>
                     )
                   })}
                 </tr>
                 {holeNumber > 1 && (
-                  <tr style={{ fontWeight: 600, backgroundColor: '#f4f7fb' }}>
-                    <td style={{ border: '1px solid #ccc', padding: '10px', textAlign: 'left', width: holeColumnWidth }}>Round {holeNumber} Subtotal</td>
+                  <tr style={{ fontWeight: 600, backgroundColor: subtotalBg }}>
+                    <td style={{ border: `1px solid ${borderColor}`, padding: '10px', textAlign: 'left', width: holeColumnWidth }}>Round {holeNumber} Subtotal</td>
                     {playerNames.map((_, playerIdx) => {
                       const cumulative = runningTotalsByHole[holeNumber]?.[playerIdx]
                       const hasSubtotal = typeof cumulative === 'number'
                       return (
                         <td
                           key={`subtotal-${holeNumber}-${playerIdx}`}
-                          style={{ border: '1px solid #ccc', padding: '10px', width: playerColumnWidth }}
+                          style={{ border: `1px solid ${borderColor}`, padding: '10px', width: playerColumnWidth }}
                         >
-                          {hasSubtotal ? cumulative : <span style={{ color: '#bbb' }}>--</span>}
+                          {hasSubtotal ? cumulative : <span style={{ color: darkMode ? '#6b7280' : '#bbb' }}>--</span>}
                         </td>
                       )
                     })}
@@ -139,12 +148,12 @@ export default function Scorecard({ holeScores, overallTotals, currentHole, play
           })}
         </tbody>
         <tfoot>
-          <tr style={{ fontWeight: 600, backgroundColor: '#d6f5d6' }}>
-            <td style={{ border: '1px solid #ccc', padding: '10px', textAlign: 'left', width: holeColumnWidth }}>Game Total</td>
+          <tr style={{ fontWeight: 600, backgroundColor: totalBg }}>
+            <td style={{ border: `1px solid ${borderColor}`, padding: '10px', textAlign: 'left', width: holeColumnWidth }}>Game Total</td>
             {gameTotals.map((score, idx) => (
               <td
                 key={idx}
-                style={{ border: '1px solid #ccc', padding: '10px', width: playerColumnWidth }}
+                style={{ border: `1px solid ${borderColor}`, padding: '10px', width: playerColumnWidth }}
               >
                 {score}
               </td>
@@ -159,12 +168,12 @@ export default function Scorecard({ holeScores, overallTotals, currentHole, play
           top: 60,
           right: 20,
           width: 320,
-          background: '#ffffff',
-          color: '#1f2933',
+          background: darkMode ? '#374151' : '#ffffff',
+          color: darkMode ? '#e5e5e5' : '#1f2933',
           borderRadius: 12,
           padding: 16,
           boxShadow: '0 12px 30px rgba(15, 23, 42, 0.25)',
-          border: '1px solid #d1d5db'
+          border: darkMode ? '1px solid #6b7280' : '1px solid #d1d5db'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <div style={{ fontWeight: 600, fontSize: 15 }}>Hole {open.hole} - {playerNames[open.playerIndex]}</div>
@@ -172,7 +181,7 @@ export default function Scorecard({ holeScores, overallTotals, currentHole, play
               onClick={() => setOpen(null)}
               style={{
                 background: 'transparent',
-                color: '#64748b',
+                color: darkMode ? '#9ca3af' : '#64748b',
                 border: 'none',
                 cursor: 'pointer',
                 fontSize: 18,
@@ -181,20 +190,20 @@ export default function Scorecard({ holeScores, overallTotals, currentHole, play
               aria-label="Close breakdown"
             >×</button>
           </div>
-          <div style={{ fontSize: 12, color: '#475569', marginBottom: 10 }}>
+          <div style={{ fontSize: 12, color: darkMode ? '#9ca3af' : '#475569', marginBottom: 10 }}>
             Breakdown of raw column score, bonuses, and final hole total.
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, fontSize: 13 }}>
-            <div style={{ color: '#0f172a' }}>Raw Score</div><div>{openBreakdown.rawScore}</div>
-            <div style={{ color: '#0f172a' }}>Matching Columns</div><div>{openBreakdown.matchingColumnCount}</div>
-            <div style={{ color: '#0f172a' }}>-5 Count</div><div>{openBreakdown.minusFiveCount}</div>
-            <div style={{ color: '#0f172a' }}>Bonus</div><div>{openBreakdown.bonus}</div>
-            <div style={{ color: '#0f172a', fontWeight: 600 }}>Final</div><div style={{ fontWeight: 600 }}>{openBreakdown.final}</div>
+            <div style={{ color: darkMode ? '#e5e5e5' : '#0f172a' }}>Raw Score</div><div>{openBreakdown.rawScore}</div>
+            <div style={{ color: darkMode ? '#e5e5e5' : '#0f172a' }}>Matching Columns</div><div>{openBreakdown.matchingColumnCount}</div>
+            <div style={{ color: darkMode ? '#e5e5e5' : '#0f172a' }}>-5 Count</div><div>{openBreakdown.minusFiveCount}</div>
+            <div style={{ color: darkMode ? '#e5e5e5' : '#0f172a' }}>Bonus</div><div>{openBreakdown.bonus}</div>
+            <div style={{ color: darkMode ? '#e5e5e5' : '#0f172a', fontWeight: 600 }}>Final</div><div style={{ fontWeight: 600 }}>{openBreakdown.final}</div>
           </div>
-          <div style={{ marginTop: 12, fontSize: 12, fontWeight: 600, color: '#1f2937' }}>Columns</div>
+          <div style={{ marginTop: 12, fontSize: 12, fontWeight: 600, color: darkMode ? '#e5e5e5' : '#1f2937' }}>Columns</div>
           <table style={{ width: '100%', marginTop: 6, fontSize: 12, borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ textAlign: 'left', color: '#6b7280' }}>
+              <tr style={{ textAlign: 'left', color: darkMode ? '#9ca3af' : '#6b7280' }}>
                 <th style={{ padding: '4px 6px', borderBottom: '1px solid #e2e8f0' }}>#</th>
                 <th style={{ padding: '4px 6px', borderBottom: '1px solid #e2e8f0' }}>Top</th>
                 <th style={{ padding: '4px 6px', borderBottom: '1px solid #e2e8f0' }}>Bottom</th>

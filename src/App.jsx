@@ -23,6 +23,23 @@ export default function App() {
       console.warn('Failed to save AI speed to localStorage:', error)
     }
   }, [aiSpeed])
+
+  const [darkMode, setDarkMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem('golf:darkMode')
+      return saved ? JSON.parse(saved) : false
+    } catch (error) {
+      console.warn('Failed to load dark mode from localStorage:', error)
+      return false
+    }
+  })
+  useEffect(() => {
+    try {
+      localStorage.setItem('golf:darkMode', JSON.stringify(darkMode))
+    } catch (error) {
+      console.warn('Failed to save dark mode to localStorage:', error)
+    }
+  }, [darkMode])
   const {
     playerSetup,
     playerCount,
@@ -117,6 +134,7 @@ export default function App() {
                 color={playerSetup[playerIndex]?.color || '#fff'}
                 isComputer={!!playerSetup[playerIndex]?.isComputer}
                 isCurrentPlayer={playerIndex === currentPlayer && !roundOver}
+                darkMode={darkMode}
                 runningTotal={
                   runningTotalsWithBonus?.[playerIndex] ??
                   (visibleScores ? visibleScores[playerIndex] : undefined) ??
@@ -165,7 +183,8 @@ export default function App() {
             onDraw={drawCard}
             onPickUp={pickUpDiscard}
             onDiscard={discardDrawnCard}
-              deckCount={deckCount}
+            deckCount={deckCount}
+            darkMode={darkMode}
           />
         </div>
         {renderRow(bottomPlayers, topCount, 'bottom')}
@@ -179,16 +198,62 @@ export default function App() {
     'min-h-screen p-4',
   ].join(' ')
 
+  const theme = {
+    light: {
+      background: '#f8f6f1',
+      text: '#222',
+      secondaryText: '#666',
+      heading: '#fff',
+      cardText: '#000',
+    },
+    dark: {
+      background: '#2d3748',
+      text: '#e5e5e5',
+      secondaryText: '#a3a3a3',
+      heading: '#fff',
+      cardText: '#fff',
+    },
+  }
+
+  const currentTheme = darkMode ? theme.dark : theme.light
+
+  // Apply theme to entire page
+  useEffect(() => {
+    document.body.style.backgroundColor = currentTheme.background
+    document.documentElement.style.backgroundColor = currentTheme.background
+  }, [currentTheme.background])
+
   const containerStyle = {
-    backgroundColor: '#f8f6f1',
+    backgroundColor: currentTheme.background,
   }
 
   return (
     <div>
+      <button
+        onClick={() => setDarkMode(!darkMode)}
+        style={{
+          position: 'fixed',
+          top: 16,
+          right: 16,
+          background: darkMode ? '#374151' : '#fff',
+          color: darkMode ? '#fbbf24' : '#14532D',
+          border: darkMode ? '2px solid #4b5563' : '2px solid #14532D',
+          borderRadius: 8,
+          padding: '8px 16px',
+          fontSize: 14,
+          fontWeight: '600',
+          cursor: 'pointer',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+          zIndex: 1000,
+          transition: 'all 0.3s ease',
+        }}
+      >
+        {darkMode ? '☀️ Light' : '🌙 Dark'}
+      </button>
       <div className={containerClass} style={containerStyle}>
         {!setupComplete ? (
           <>
-            <h1 className="text-white text-4xl font-bold mb-4 text-center tracking-wide">Golf</h1>
+            <h1 style={{ color: currentTheme.heading }} className="text-4xl font-bold mb-4 text-center tracking-wide">Golf</h1>
             <PlayerSetup
               playerSetup={playerSetup}
               playerCount={playerCount}
@@ -260,6 +325,7 @@ export default function App() {
               overallTotals={overallTotals}
               currentHole={currentHole}
               playerNames={playerNames}
+              darkMode={darkMode}
             />
             <div
               style={{
@@ -270,16 +336,16 @@ export default function App() {
                 justifyContent: 'center',
               }}
             >
-              <label style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>
+              <label style={{ color: currentTheme.text, fontSize: 14, fontWeight: '600' }}>
                 AI Speed:
                 <select
                   value={aiSpeed}
                   onChange={e => setAiSpeed(e.target.value)}
                   style={{
                     marginLeft: 8,
-                    background: '#14532D',
-                    color: '#FFD600',
-                    border: '1px solid #FFD600',
+                    background: darkMode ? '#374151' : '#14532D',
+                    color: darkMode ? '#fbbf24' : '#FFD600',
+                    border: darkMode ? '1px solid #4b5563' : '1px solid #FFD600',
                     borderRadius: 6,
                     padding: '4px 8px',
                     fontWeight: '600',
@@ -290,7 +356,7 @@ export default function App() {
                   <option value="fast">Fast</option>
                 </select>
               </label>
-              <span style={{ color: '#080000ff', fontSize: 12, fontStyle: 'italic' }}>
+              <span style={{ color: currentTheme.secondaryText, fontSize: 12, fontStyle: 'italic' }}>
                 (affects computer player only)
               </span>
             </div>
