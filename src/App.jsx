@@ -11,10 +11,17 @@ export default function App() {
   const [aiSpeed, setAiSpeed] = useState(() => {
     try {
       return localStorage.getItem('golf:aiSpeed') || 'slow'
-    } catch { return 'slow' }
+    } catch (error) {
+      console.warn('Failed to load AI speed from localStorage:', error)
+      return 'slow'
+    }
   })
   useEffect(() => {
-    try { localStorage.setItem('golf:aiSpeed', aiSpeed) } catch {}
+    try { 
+      localStorage.setItem('golf:aiSpeed', aiSpeed)
+    } catch (error) {
+      console.warn('Failed to save AI speed to localStorage:', error)
+    }
   }, [aiSpeed])
   const {
     playerSetup,
@@ -26,14 +33,12 @@ export default function App() {
     handlePlayerCountChange,
     players,
     currentPlayer,
-    setCurrentPlayer,
     drawnCard,
     discardPile,
     discardTop,
     initialFlips,
     firstTurnDraw,
     turnComplete,
-    setRoundOver,
     roundOver,
     currentHole,
     holeScores,
@@ -46,7 +51,8 @@ export default function App() {
     canInteractWithCard,
     visibleScores,
     runningTotalsWithBonus,
-    clearSavedGame,
+    endRoundImmediately,
+    resetGame,
     finalTurnPlayer,
     finalTurnPending,
     deckCount,
@@ -61,7 +67,8 @@ export default function App() {
     !roundOver &&
     currentInitialFlips &&
     !currentTurnComplete &&
-    (!currentFirstTurnDraw || (currentFirstTurnDraw && !drawnCard))
+    !currentFirstTurnDraw &&
+    !drawnCard
 
   const canPickUp =
     !roundOver &&
@@ -109,6 +116,7 @@ export default function App() {
                 name={playerNames[playerIndex]}
                 color={playerSetup[playerIndex]?.color || '#fff'}
                 isComputer={!!playerSetup[playerIndex]?.isComputer}
+                isCurrentPlayer={playerIndex === currentPlayer && !roundOver}
                 runningTotal={
                   runningTotalsWithBonus?.[playerIndex] ??
                   (visibleScores ? visibleScores[playerIndex] : undefined) ??
@@ -233,12 +241,19 @@ export default function App() {
             )}
             {renderPlayerArea()}
             <ActionBar
-              onEndRound={() => setRoundOver(true)}
-              onReset={() => window.location.reload()}
+              onEndRound={() => {
+                if (window.confirm('Are you sure you want to end this round? All cards will be revealed and scored.')) {
+                  endRoundImmediately()
+                }
+              }}
+              onReset={() => {
+                if (window.confirm('Are you sure you want to reset the entire game? All progress will be lost.')) {
+                  resetGame()
+                }
+              }}
               onNextHole={startNextHole}
               roundOver={roundOver}
               currentHole={currentHole}
-              onClearSave={clearSavedGame}
             />
             <Scorecard
               holeScores={holeScores}

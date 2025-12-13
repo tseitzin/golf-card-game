@@ -1,4 +1,6 @@
-export default function ActionBar({ onReset, onEndRound, onNextHole, roundOver, currentHole, onClearSave }) {
+import PropTypes from 'prop-types'
+
+export default function ActionBar({ onReset, onEndRound, onNextHole, roundOver, currentHole }) {
   return (
     <div style={{ marginTop: '24px', display: 'flex', gap: '16px', justifyContent: 'center' }}>
       <button
@@ -15,21 +17,6 @@ export default function ActionBar({ onReset, onEndRound, onNextHole, roundOver, 
         onClick={onReset}
       >
         Reset
-      </button>
-      <button
-        style={{
-          background: '#dc2626',
-          color: '#fff',
-          fontWeight: 'bold',
-          padding: '12px 32px',
-          borderRadius: '999px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-          border: 'none',
-          cursor: 'pointer',
-        }}
-        onClick={onClearSave}
-      >
-        Clear Save
       </button>
       <button
         style={{
@@ -65,4 +52,12 @@ export default function ActionBar({ onReset, onEndRound, onNextHole, roundOver, 
       )}
     </div>
   )
+}
+
+ActionBar.propTypes = {
+  onReset: PropTypes.func.isRequired,
+  onEndRound: PropTypes.func.isRequired,
+  onNextHole: PropTypes.func.isRequired,
+  roundOver: PropTypes.bool.isRequired,
+  currentHole: PropTypes.number.isRequired,
 }

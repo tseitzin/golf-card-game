@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { calculateVisibleScore, calculateScore, explainScore } from '../utils/score'
+import { calculateVisibleScore, explainScore } from '../utils/score'
 
 const DECK_COPY_COUNT = 8
 const COLUMN_COUNT = 4
@@ -252,10 +252,8 @@ export function useGameState(config = {}) {
     if (faceDownCount <= 1) {
       setTurnComplete(prev => prev.map((v, i) => (i === currentPlayer ? true : v)))
       setMustFlipAfterDiscard(prev => prev.map((v, i) => (i === currentPlayer ? false : v)))
-      setFirstTurnDraw(prev => prev.map((v, i) => (i === currentPlayer ? (playerSetup[i]?.isComputer ? true : false) : v)))
     } else {
       setMustFlipAfterDiscard(prev => prev.map((v, i) => (i === currentPlayer ? true : v)))
-      setFirstTurnDraw(prev => prev.map((v, i) => (i === currentPlayer ? (playerSetup[i]?.isComputer ? true : false) : v)))
     }
   }, [currentPlayer, drawnCard, players, turnComplete, roundOver, playerSetup])
 
@@ -265,7 +263,7 @@ export function useGameState(config = {}) {
     const top = discardPile[0]
     setDrawnCard({ ...top, faceUp: true })
     setDiscardPile(prev => prev.slice(1))
-    setDiscardTop(prev => (discardPile.length > 1 ? discardPile[1] : null))
+    setDiscardTop(discardPile.length > 1 ? discardPile[1] : null)
     setMustFlipAfterDiscard(prev => prev.map((v, i) => (i === currentPlayer ? false : v)))
   }, [currentPlayer, discardPile, drawnCard, turnComplete, roundOver])
 
@@ -291,8 +289,6 @@ export function useGameState(config = {}) {
         setDiscardTop(discarded)
       }
       setDrawnCard(null)
-      // Preserve firstTurnDraw for computer to block extra draw attempt
-      setFirstTurnDraw(prev => prev.map((v, i) => (i === currentPlayer ? (playerSetup[i]?.isComputer ? true : false) : v)))
       setMustFlipAfterDiscard(prev => prev.map((v, i) => (i === currentPlayer ? false : v)))
       setTurnComplete(prev => prev.map((v, i) => (i === currentPlayer ? true : v)))
     },
@@ -609,7 +605,7 @@ export function useGameState(config = {}) {
       return
     }
 
-    if (!turnComplete[playerIndex] && !drawnCard && initialFlips[playerIndex]) {
+    if (!turnComplete[playerIndex] && !drawnCard && !firstTurnDraw[playerIndex] && initialFlips[playerIndex]) {
       await delay(stepDelay)
       drawCard()
     }
@@ -629,6 +625,7 @@ export function useGameState(config = {}) {
     roundOver,
     setupComplete,
     stepDelay,
+    quickDelay,
     delay,
     turnComplete,
     enableSkipHeuristic,
@@ -974,6 +971,7 @@ export function useGameState(config = {}) {
     deckRest,
     drawnCard,
     discardPile,
+    discardTop,
     initialFlips,
     firstTurnDraw,
     turnComplete,
@@ -982,13 +980,50 @@ export function useGameState(config = {}) {
     currentHole,
     holeScores,
     playerCount,
+    holeStartingPlayer,
   ])
 
   const clearSavedGame = useCallback(() => {
     try {
       localStorage.removeItem(persistenceKey)
-    } catch {}
+    } catch (error) {
+      console.warn('Failed to clear saved game from localStorage:', error)
+    }
   }, [persistenceKey])
+
+  const endRoundImmediately = useCallback(() => {
+    // Reveal all cards and end the round immediately
+    setPlayers(ps => ps.map(p => revealAllCardsForPlayer(p)))
+    setRoundOver(true)
+    setFinalTurnPlayer(null)
+    setFinalTurnPending(false)
+    setFinalTurnQueue([])
+  }, [])
+
+  const resetGame = useCallback(() => {
+    // Reset to setup screen
+    clearSavedGame()
+    const initialCount = 2
+    setPlayerCount(initialCount)
+    setPlayerSetup(resizeSetup([], initialCount))
+    const { players: freshPlayers, rest } = dealPlayersFromDeck(deck, initialCount)
+    setPlayers(freshPlayers)
+    setDeckRest(rest)
+    setDrawnCard(null)
+    setDiscardPile([])
+    setDiscardTop(null)
+    resetTurnState(initialCount)
+    setCurrentPlayer(0)
+    setHoleStartingPlayer(0)
+    setFinalTurnPlayer(null)
+    setFinalTurnPending(false)
+    setFinalTurnQueue([])
+    setRoundOver(false)
+    setCurrentHole(1)
+    setHoleScores([])
+    setSetupComplete(false)
+    setSetupError(null)
+  }, [clearSavedGame, deck, resetTurnState])
 
   return {
     playerSetup,
@@ -1022,7 +1057,8 @@ export function useGameState(config = {}) {
     canInteractWithCard,
     visibleScores,
     runningTotalsWithBonus,
-    clearSavedGame,
+    endRoundImmediately,
+    resetGame,
     finalTurnPlayer,
     finalTurnPending,
     deckCount: deckRest.length,

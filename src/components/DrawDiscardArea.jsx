@@ -1,3 +1,5 @@
+import PropTypes from 'prop-types'
+
 export default function DrawDiscardArea({
   drawnCard,
   discardTop,
@@ -86,4 +88,24 @@ export default function DrawDiscardArea({
       )}
     </div>
   )
+}
+
+DrawDiscardArea.propTypes = {
+  drawnCard: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    value: PropTypes.number.isRequired,
+    faceUp: PropTypes.bool,
+  }),
+  discardTop: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    value: PropTypes.number.isRequired,
+    faceUp: PropTypes.bool,
+  }),
+  canDraw: PropTypes.bool.isRequired,
+  canPickUp: PropTypes.bool.isRequired,
+  canDiscard: PropTypes.bool.isRequired,
+  onDraw: PropTypes.func.isRequired,
+  onPickUp: PropTypes.func.isRequired,
+  onDiscard: PropTypes.func.isRequired,
+  deckCount: PropTypes.number,
 }

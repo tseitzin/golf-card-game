@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react'
+import PropTypes from 'prop-types'
 
 const TOTAL_HOLES = 9
 export default function Scorecard({ holeScores, overallTotals, currentHole, playerNames }) {
@@ -64,7 +65,7 @@ export default function Scorecard({ holeScores, overallTotals, currentHole, play
       fontFamily: `'Segoe UI', Tahoma, Geneva, Verdana, sans-serif`,
       position: 'relative'
     }}>
-      <h2 style={{ margin: '0 0 16px', fontWeight: 600, textAlign: 'center' }}>Play Nine: The Card Game of Golf</h2>
+      <h2 style={{ margin: '0 0 16px', fontWeight: 600, textAlign: 'center' }}>Golf Card Game Scorecard</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: 14, tableLayout: 'fixed' }}>
         <thead>
           <tr>
@@ -220,4 +221,26 @@ export default function Scorecard({ holeScores, overallTotals, currentHole, play
       )}
     </div>
   )
+}
+
+Scorecard.propTypes = {
+  holeScores: PropTypes.arrayOf(
+    PropTypes.shape({
+      hole: PropTypes.number.isRequired,
+      scores: PropTypes.arrayOf(PropTypes.number).isRequired,
+      breakdowns: PropTypes.arrayOf(
+        PropTypes.shape({
+          rawScore: PropTypes.number.isRequired,
+          matchingColumnCount: PropTypes.number.isRequired,
+          minusFiveCount: PropTypes.number.isRequired,
+          bonus: PropTypes.number.isRequired,
+          final: PropTypes.number.isRequired,
+          columns: PropTypes.array,
+        })
+      ),
+    })
+  ).isRequired,
+  overallTotals: PropTypes.arrayOf(PropTypes.number),
+  currentHole: PropTypes.number.isRequired,
+  playerNames: PropTypes.arrayOf(PropTypes.string).isRequired,
 }

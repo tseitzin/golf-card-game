@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import PropTypes from 'prop-types'
 
 /**
  * Card component: purely visual card flip.
@@ -107,4 +108,18 @@ export default function Card({ card, onClick, interactive, width = 52, height = 
       </div>
     </div>
   )
+}
+
+Card.propTypes = {
+  card: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    value: PropTypes.number.isRequired,
+    faceUp: PropTypes.bool.isRequired,
+  }),
+  onClick: PropTypes.func,
+  interactive: PropTypes.bool,
+  width: PropTypes.number,
+  height: PropTypes.number,
+  flipDelay: PropTypes.number,
+  highlighted: PropTypes.bool,
 }

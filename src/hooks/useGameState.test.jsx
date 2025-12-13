@@ -732,12 +732,9 @@ describe('useGameState', () => {
       result.current.handleSetupSubmit(mockEvent())
       flipTwoCards(result)
     })
-    const preDrawDebug = result.current.__debug ? result.current.__debug() : null
     act(() => {
       result.current.drawCard()
     })
-    const postDrawDebug = result.current.__debug ? result.current.__debug() : null
-      // (debug logs removed)
     await flushAsync()
     drawnValue = result.current.drawnCard?.value
     expect(typeof drawnValue).toBe('number')
@@ -781,15 +778,12 @@ describe('useGameState', () => {
   it('updates discard pile top value correctly through draw->discard and draw->replace sequences (no computer interference)', async () => {
     const deck = createTestDeck()
     const { result } = renderHook(() => useGameState({ disableDelays: true, initialDeck: deck, enablePersistence: false, exposeTestHelpers: true, disableComputerAuto: true }))
-    let firstDrawValue, firstDiscardValue, secondDrawValue, replacedCardValue
+    let firstDrawValue, firstDiscardValue, replacedCardValue
     act(() => {
       result.current.handleSetupSubmit(mockEvent())
       flipTwoCards(result)
     })
-    const seqPreDraw = result.current.__debug ? result.current.__debug() : null
     act(() => { result.current.drawCard() })
-    const seqPostDraw = result.current.__debug ? result.current.__debug() : null
-      // (debug logs removed)
     await flushAsync()
     firstDrawValue = result.current.drawnCard?.value
     expect(typeof firstDrawValue).toBe('number')
@@ -797,7 +791,6 @@ describe('useGameState', () => {
     firstDiscardValue = result.current.discardPile[0].value
     act(() => { result.current.drawCard() })
     await flushAsync()
-    secondDrawValue = result.current.drawnCard?.value
     replacedCardValue = result.current.players[0].cards[0].value
     act(() => { result.current.handleCardClick(0, 0) })
     // After first discard, top should equal firstDrawValue

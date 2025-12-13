@@ -113,7 +113,7 @@ describe('App integration surface', () => {
     render(<App />)
 
     expect(screen.getByText("Alice's Turn")).toBeInTheDocument()
-    expect(screen.getByText('Scorecard (Hole 2 / 9)')).toBeInTheDocument()
+    expect(screen.getByText('Play Nine: The Card Game of Golf')).toBeInTheDocument()
     expect(screen.getByText('42 cards left')).toBeInTheDocument()
     fireEvent.click(screen.getByText('End Round'))
     expect(setRoundOver).toHaveBeenCalledWith(true)

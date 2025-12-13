@@ -1,3 +1,5 @@
+import PropTypes from 'prop-types'
+
 export default function PlayerSetup({
   playerSetup,
   playerCount,
@@ -152,4 +154,19 @@ export default function PlayerSetup({
       </button>
     </form>
   )
+}
+
+PlayerSetup.propTypes = {
+  playerSetup: PropTypes.arrayOf(
+    PropTypes.shape({
+      name: PropTypes.string,
+      color: PropTypes.string.isRequired,
+      isComputer: PropTypes.bool,
+    })
+  ).isRequired,
+  playerCount: PropTypes.number.isRequired,
+  onPlayerCountChange: PropTypes.func,
+  onChange: PropTypes.func.isRequired,
+  onSubmit: PropTypes.func.isRequired,
+  setupError: PropTypes.string,
 }

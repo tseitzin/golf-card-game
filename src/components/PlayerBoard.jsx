@@ -1,5 +1,33 @@
 import Card from './Card.jsx'
 import { useRef, useEffect } from 'react'
+import PropTypes from 'prop-types'
+
+// Helper function to get a contrasting highlight color
+const getContrastingHighlight = (bgColor) => {
+  // Parse hex color to RGB
+  const hex = bgColor.replace('#', '')
+  const r = parseInt(hex.substr(0, 2), 16)
+  const g = parseInt(hex.substr(2, 2), 16)
+  const b = parseInt(hex.substr(4, 2), 16)
+  
+  // Calculate perceived brightness (0-255)
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000
+  
+  // For light backgrounds, use dark highlight; for dark backgrounds, use light highlight
+  if (brightness > 128) {
+    // Light background - use dark red/crimson
+    return {
+      color: '#DC2626',
+      shadow: 'rgba(220, 38, 38, 0.6)'
+    }
+  } else {
+    // Dark background - use bright white/cyan
+    return {
+      color: '#FFFFFF',
+      shadow: 'rgba(255, 255, 255, 0.7)'
+    }
+  }
+}
 
 export default function PlayerBoard({
   index,
@@ -7,6 +35,7 @@ export default function PlayerBoard({
   name,
   color,
   isComputer,
+  isCurrentPlayer,
   runningTotal,
   canInteractWithCard,
   onCardClick,
@@ -18,6 +47,9 @@ export default function PlayerBoard({
   }, [player])
 
   const cards = player?.cards || Array(8).fill(null)
+  
+  // Get contrasting highlight color based on player background
+  const highlight = isCurrentPlayer ? getContrastingHighlight(color) : null
 
   const highlightIndices = (() => {
     const byValue = {}
@@ -56,7 +88,8 @@ export default function PlayerBoard({
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: 6,
+        gap: 10,
+        position: 'relative',
       }}
     >
       <div
@@ -68,6 +101,9 @@ export default function PlayerBoard({
         }}
       >
         {name}
+        {isCurrentPlayer && (
+          <span style={{ marginLeft: 8, fontSize: 18 }}>👈</span>
+        )}
       </div>
       <div
         style={{
@@ -88,7 +124,11 @@ export default function PlayerBoard({
           background: color,
           borderRadius: 10,
           padding: 10,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+          boxShadow: isCurrentPlayer 
+            ? `0 0 0 4px ${highlight.color}, 0 0 20px ${highlight.shadow}, 0 4px 12px rgba(0,0,0,0.3)` 
+            : '0 2px 8px rgba(0,0,0,0.08)',
+          transition: 'box-shadow 0.3s ease',
+          position: 'relative',
         }}
       >
         {cards.map((card, idxCard) => {
@@ -138,5 +178,26 @@ export default function PlayerBoard({
       </div>
     </div>
   )
+}
+
+PlayerBoard.propTypes = {
+  index: PropTypes.number.isRequired,
+  player: PropTypes.shape({
+    cards: PropTypes.arrayOf(
+      PropTypes.shape({
+        id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+        value: PropTypes.number.isRequired,
+        faceUp: PropTypes.bool.isRequired,
+      })
+    ).isRequired,
+    flippedCount: PropTypes.number,
+  }),
+  name: PropTypes.string.isRequired,
+  color: PropTypes.string.isRequired,
+  isComputer: PropTypes.bool,
+  isCurrentPlayer: PropTypes.bool,
+  runningTotal: PropTypes.number,
+  canInteractWithCard: PropTypes.func.isRequired,
+  onCardClick: PropTypes.func,
 }
 
