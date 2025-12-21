@@ -95,7 +95,7 @@ export default function SetupScreen({ onStartGame, darkMode }) {
 
 		onStartGame({
 			players,
-			boardSize: size,
+			boardSize: size + 1,
 		});
 	};
 
@@ -191,7 +191,7 @@ export default function SetupScreen({ onStartGame, darkMode }) {
 							marginBottom: 8,
 						}}
 					>
-						Grid Size (e.g., 20 for a 20x20 grid)
+						Grid Size (number of boxes per side)
 					</label>
 					<input
 						type="number"
@@ -220,7 +220,7 @@ export default function SetupScreen({ onStartGame, darkMode }) {
 							textAlign: 'center',
 						}}
 					>
-						Choose between 3 and 30 (Recommended: 10-15 for a good game)
+						Enter 20 to create a 20x20 grid of boxes (Recommended: 10-15)
 					</p>
 				</div>
 
