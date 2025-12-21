@@ -44,9 +44,13 @@ export default function RaceGame() {
       for (let i = 0; i < raceConfig.humanPlayers; i++) {
         const controls = KEYBOARD_CONTROLS[i];
         if (controls) {
+          const hasAccelerate = pressedKeysRef.current.has(controls.accelerate);
+          const hasAlternate = 'alternate' in controls && pressedKeysRef.current.has(controls.alternate as string);
           inputs[i] = {
-            accelerate: pressedKeysRef.current.has(controls.accelerate),
+            accelerate: hasAccelerate || hasAlternate,
             brake: pressedKeysRef.current.has(controls.brake),
+            turnLeft: pressedKeysRef.current.has(controls.turnLeft),
+            turnRight: pressedKeysRef.current.has(controls.turnRight),
           };
         }
       }
@@ -65,11 +69,13 @@ export default function RaceGame() {
   const getCombinedInputs = useCallback((): PlayerInputs => {
     const combined: PlayerInputs = {};
     for (let i = 0; i < raceConfig.humanPlayers; i++) {
-      const keyboard = keyboardInputsRef.current[i] || { accelerate: false, brake: false };
-      const touch = touchInputs[i] || { accelerate: false, brake: false };
+      const keyboard = keyboardInputsRef.current[i] || { accelerate: false, brake: false, turnLeft: false, turnRight: false };
+      const touch = touchInputs[i] || { accelerate: false, brake: false, turnLeft: false, turnRight: false };
       combined[i] = {
         accelerate: keyboard.accelerate || touch.accelerate,
         brake: keyboard.brake || touch.brake,
+        turnLeft: keyboard.turnLeft || touch.turnLeft,
+        turnRight: keyboard.turnRight || touch.turnRight,
       };
     }
     return combined;
@@ -171,7 +177,7 @@ export default function RaceGame() {
   }
 
   return (
-    <div className="w-screen h-screen bg-gray-900 overflow-hidden relative">
+    <div style={{ position: 'fixed', inset: 0, backgroundColor: '#111827', overflow: 'hidden' }}>
       {/* Home button */}
       <Link
         to="/"
