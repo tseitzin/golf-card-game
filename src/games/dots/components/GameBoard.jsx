@@ -7,6 +7,8 @@ export default function GameBoard({
 	lines,
 	boxes,
 	onLineClick,
+	onUndo,
+	lastMove,
 	darkMode,
 }) {
 	const [hoveredLine, setHoveredLine] = useState(null);
@@ -188,6 +190,9 @@ export default function GameBoard({
 		score: Object.values(boxes).filter(owner => owner === idx).length,
 	}));
 
+	const canUndo = lastMove && !currentPlayer.isComputer &&
+		!players[lastMove.previousPlayerIndex]?.isComputer;
+
 	return (
 		<div
 			style={{
@@ -218,7 +223,7 @@ export default function GameBoard({
 				style={{
 					display: 'flex',
 					gap: 16,
-					marginBottom: 24,
+					marginBottom: 16,
 					flexWrap: 'wrap',
 					justifyContent: 'center',
 				}}
@@ -257,6 +262,27 @@ export default function GameBoard({
 					</div>
 				))}
 			</div>
+
+			<button
+				onClick={onUndo}
+				disabled={!canUndo}
+				style={{
+					marginBottom: 24,
+					padding: '10px 20px',
+					borderRadius: 8,
+					backgroundColor: canUndo ? (darkMode ? '#4b5563' : '#374151') : (darkMode ? '#2d3748' : '#e5e7eb'),
+					color: canUndo ? '#fff' : (darkMode ? '#6b7280' : '#9ca3af'),
+					border: 'none',
+					fontSize: 14,
+					fontWeight: '600',
+					cursor: canUndo ? 'pointer' : 'not-allowed',
+					boxShadow: canUndo ? '0 2px 8px rgba(0,0,0,0.2)' : 'none',
+					transition: 'all 0.2s ease',
+					opacity: canUndo ? 1 : 0.5,
+				}}
+			>
+				↶ Undo Last Move
+			</button>
 
 			<div
 				style={{

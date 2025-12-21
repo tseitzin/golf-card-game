@@ -9,6 +9,7 @@ export function useGameState() {
 	const [boxes, setBoxes] = useState({});
 	const [gameOver, setGameOver] = useState(false);
 	const [winner, setWinner] = useState(null);
+	const [lastMove, setLastMove] = useState(null);
 	const aiTimeoutRef = useRef(null);
 
 	const initializeGame = useCallback((config) => {
@@ -19,6 +20,7 @@ export function useGameState() {
 		setBoxes({});
 		setGameOver(false);
 		setWinner(null);
+		setLastMove(null);
 	}, []);
 
 	const resetGame = useCallback(() => {
@@ -27,6 +29,7 @@ export function useGameState() {
 		setBoxes({});
 		setGameOver(false);
 		setWinner(null);
+		setLastMove(null);
 	}, []);
 
 	const lineKey = useCallback((row, col, isHorizontal) => {
@@ -62,12 +65,14 @@ export function useGameState() {
 
 		let completedBoxes = 0;
 		const newBoxes = { ...boxes };
+		const boxesAdded = [];
 
 		for (let r = 0; r < boardSize - 1; r++) {
 			for (let c = 0; c < boardSize - 1; c++) {
 				const boxKey = `${r},${c}`;
 				if (!newBoxes[boxKey] && checkBoxCompletion(newLines, r, c)) {
 					newBoxes[boxKey] = currentPlayerIndex;
+					boxesAdded.push(boxKey);
 					completedBoxes++;
 				}
 			}
@@ -77,6 +82,16 @@ export function useGameState() {
 
 		const totalBoxes = (boardSize - 1) * (boardSize - 1);
 		const boxesCompleted = Object.keys(newBoxes).length;
+
+		const previousPlayerIndex = currentPlayerIndex;
+		const turnChanged = completedBoxes === 0;
+
+		setLastMove({
+			line: key,
+			boxesAdded,
+			previousPlayerIndex,
+			turnChanged,
+		});
 
 		if (boxesCompleted === totalBoxes) {
 			const scores = players.map((_, idx) =>
@@ -102,6 +117,33 @@ export function useGameState() {
 
 		return true;
 	}, [gameOver, lines, boxes, currentPlayerIndex, players, boardSize, lineKey, checkBoxCompletion]);
+
+	const undoLastMove = useCallback(() => {
+		if (!lastMove || gameOver) return false;
+
+		const currentPlayer = players[currentPlayerIndex];
+		if (currentPlayer?.isComputer) return false;
+
+		const previousPlayer = players[lastMove.previousPlayerIndex];
+		if (previousPlayer?.isComputer) return false;
+
+		const newLines = new Set(lines);
+		newLines.delete(lastMove.line);
+		setLines(newLines);
+
+		const newBoxes = { ...boxes };
+		lastMove.boxesAdded.forEach(boxKey => {
+			delete newBoxes[boxKey];
+		});
+		setBoxes(newBoxes);
+
+		if (lastMove.turnChanged) {
+			setCurrentPlayerIndex(lastMove.previousPlayerIndex);
+		}
+
+		setLastMove(null);
+		return true;
+	}, [lastMove, lines, boxes, currentPlayerIndex, players, gameOver]);
 
 	useEffect(() => {
 		if (gameOver || players.length === 0) return;
@@ -135,8 +177,10 @@ export function useGameState() {
 		boxes,
 		gameOver,
 		winner,
+		lastMove,
 		initializeGame,
 		makeMove,
 		resetGame,
+		undoLastMove,
 	};
 }
