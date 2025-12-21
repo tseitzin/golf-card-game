@@ -134,7 +134,7 @@ export default function RaceGame() {
 
   if (gameState === 'setup') {
     return (
-      <div>
+      <>
         {/* Home button */}
         <Link
           to="/"
@@ -166,7 +166,7 @@ export default function RaceGame() {
           onConfigChange={setRaceConfig}
           onStartRace={handleStartRace}
         />
-      </div>
+      </>
     );
   }
 
