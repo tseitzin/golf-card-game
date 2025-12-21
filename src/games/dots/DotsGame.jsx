@@ -32,9 +32,11 @@ export default function DotsGame() {
 		boxes,
 		gameOver,
 		winner,
+		lastMove,
 		initializeGame,
 		makeMove,
 		resetGame,
+		undoLastMove,
 	} = useGameState();
 
 	const theme = {
@@ -185,6 +187,8 @@ export default function DotsGame() {
 				lines={lines}
 				boxes={boxes}
 				onLineClick={makeMove}
+				onUndo={undoLastMove}
+				lastMove={lastMove}
 				darkMode={darkMode}
 			/>
 

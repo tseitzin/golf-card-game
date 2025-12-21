@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function GameBoard({
 	players,
@@ -7,9 +7,27 @@ export default function GameBoard({
 	lines,
 	boxes,
 	onLineClick,
+	onUndo,
+	lastMove,
 	darkMode,
 }) {
 	const [hoveredLine, setHoveredLine] = useState(null);
+	const [windowSize, setWindowSize] = useState({
+		width: typeof window !== 'undefined' ? window.innerWidth : 1200,
+		height: typeof window !== 'undefined' ? window.innerHeight : 800,
+	});
+
+	useEffect(() => {
+		const handleResize = () => {
+			setWindowSize({
+				width: window.innerWidth,
+				height: window.innerHeight,
+			});
+		};
+
+		window.addEventListener('resize', handleResize);
+		return () => window.removeEventListener('resize', handleResize);
+	}, []);
 
 	const theme = {
 		light: {
@@ -35,20 +53,27 @@ export default function GameBoard({
 	const currentTheme = darkMode ? theme.dark : theme.light;
 	const currentPlayer = players[currentPlayerIndex];
 
-	const cellSize = Math.max(40, Math.min(80, 400 / boardSize));
-	const dotRadius = 6;
-	const lineWidth = 4;
+	const availableWidth = windowSize.width * 0.9;
+	const availableHeight = windowSize.height * 0.75;
+	const padding = 40;
+	const maxCellSize = Math.min(
+		(availableWidth - padding * 2) / boardSize,
+		(availableHeight - padding * 2) / boardSize
+	);
+	const cellSize = Math.max(12, Math.min(120, maxCellSize));
+	const dotRadius = Math.max(2, Math.min(6, cellSize * 0.15));
+	const lineWidth = Math.max(1.5, Math.min(4, cellSize * 0.1));
 
 	const lineKey = (row, col, isHorizontal) => {
 		return `${row},${col},${isHorizontal ? 'h' : 'v'}`;
 	};
 
-	const isLineDrawn = (row, col, isHorizontal) => {
-		return lines.has(lineKey(row, col, isHorizontal));
+	const getLineOwner = (row, col, isHorizontal) => {
+		return lines[lineKey(row, col, isHorizontal)];
 	};
 
 	const handleLineClick = (row, col, isHorizontal) => {
-		if (!isLineDrawn(row, col, isHorizontal) && !currentPlayer.isComputer) {
+		if (getLineOwner(row, col, isHorizontal) === undefined && !currentPlayer.isComputer) {
 			onLineClick(row, col, isHorizontal);
 		}
 	};
@@ -67,7 +92,8 @@ export default function GameBoard({
 
 	const renderLine = (row, col, isHorizontal) => {
 		const key = lineKey(row, col, isHorizontal);
-		const drawn = isLineDrawn(row, col, isHorizontal);
+		const ownerIndex = getLineOwner(row, col, isHorizontal);
+		const drawn = ownerIndex !== undefined;
 		const isHovered = hoveredLine === key;
 
 		const x1 = col * cellSize;
@@ -79,6 +105,8 @@ export default function GameBoard({
 		const midY = (y1 + y2) / 2;
 		const hitboxPadding = 12;
 
+		const lineColor = drawn ? players[ownerIndex].color : (isHovered ? currentTheme.hoverColor : 'transparent');
+
 		return (
 			<g key={key}>
 				<line
@@ -86,7 +114,7 @@ export default function GameBoard({
 					y1={y1}
 					x2={x2}
 					y2={y2}
-					stroke={drawn ? currentPlayer.color : (isHovered ? currentTheme.hoverColor : 'transparent')}
+					stroke={lineColor}
 					strokeWidth={lineWidth}
 					strokeLinecap="round"
 				/>
@@ -148,7 +176,7 @@ export default function GameBoard({
 					textAnchor="middle"
 					dominantBaseline="central"
 					fill={player.color}
-					fontSize={Math.max(16, cellSize * 0.4)}
+					fontSize={Math.max(10, cellSize * 0.5)}
 					fontWeight="bold"
 				>
 					{player.name.charAt(0).toUpperCase()}
@@ -159,12 +187,14 @@ export default function GameBoard({
 
 	const boardWidth = (boardSize - 1) * cellSize;
 	const boardHeight = (boardSize - 1) * cellSize;
-	const padding = 40;
 
 	const scores = players.map((player, idx) => ({
 		...player,
 		score: Object.values(boxes).filter(owner => owner === idx).length,
 	}));
+
+	const canUndo = lastMove && !currentPlayer.isComputer &&
+		!players[lastMove.previousPlayerIndex]?.isComputer;
 
 	return (
 		<div
@@ -196,7 +226,7 @@ export default function GameBoard({
 				style={{
 					display: 'flex',
 					gap: 16,
-					marginBottom: 24,
+					marginBottom: 16,
 					flexWrap: 'wrap',
 					justifyContent: 'center',
 				}}
@@ -235,6 +265,27 @@ export default function GameBoard({
 					</div>
 				))}
 			</div>
+
+			<button
+				onClick={onUndo}
+				disabled={!canUndo}
+				style={{
+					marginBottom: 24,
+					padding: '10px 20px',
+					borderRadius: 8,
+					backgroundColor: canUndo ? (darkMode ? '#4b5563' : '#374151') : (darkMode ? '#2d3748' : '#e5e7eb'),
+					color: canUndo ? '#fff' : (darkMode ? '#6b7280' : '#9ca3af'),
+					border: 'none',
+					fontSize: 14,
+					fontWeight: '600',
+					cursor: canUndo ? 'pointer' : 'not-allowed',
+					boxShadow: canUndo ? '0 2px 8px rgba(0,0,0,0.2)' : 'none',
+					transition: 'all 0.2s ease',
+					opacity: canUndo ? 1 : 0.5,
+				}}
+			>
+				↶ Undo Last Move
+			</button>
 
 			<div
 				style={{
