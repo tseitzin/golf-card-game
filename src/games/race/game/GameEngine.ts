@@ -1,5 +1,5 @@
-import { Car, CarConfig, PlayerInputs } from '../../types/race';
-import { CAR_PHYSICS } from '../../constants/race';
+import { Car, CarConfig, PlayerInputs } from '../../../types/race';
+import { CAR_PHYSICS } from '../../../constants/race/index.ts';
 
 export function createCar(config: CarConfig, lane: number, isAI: boolean): Car {
   const speedVariation = (Math.random() - 0.5) * CAR_PHYSICS.speedVariation * 2;

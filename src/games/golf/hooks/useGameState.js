@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { calculateVisibleScore, explainScore } from '../utils/score'
+import { calculateVisibleScore, explainScore } from '../../../utils/score'
 
 const DECK_COPY_COUNT = 8
 const COLUMN_COUNT = 4

@@ -1,0 +1,237 @@
+import { Link } from 'react-router-dom';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { GameState, RaceConfig, Car, PlayerInputs, CarConfig } from '../../../types/race';
+import { CAR_COLORS, KEYBOARD_CONTROLS } from '../../constants/race/index.ts';
+import { createCar } from './game/GameEngine';
+import { SetupScreen } from './components/SetupScreen';
+import { generateAICars } from './utils/aiCars';
+import { RaceCanvas } from './components/RaceCanvas';
+import { RaceHUD } from './components/RaceHUD';
+import { TouchControls } from './components/TouchControls';
+import { Countdown } from './components/Countdown';
+import { EndScreen } from './components/EndScreen';
+
+const getInitialConfig = (): RaceConfig => ({
+	humanPlayers: 1,
+	aiRacers: 3,
+	laps: 3,
+	playerConfigs: [
+		{ color: CAR_COLORS[0].value, number: 1, style: 0 },
+	],
+});
+
+export default function RaceGame() {
+	const [gameState, setGameState] = useState<GameState>('setup');
+	const [raceConfig, setRaceConfig] = useState<RaceConfig>(getInitialConfig);
+	const [cars, setCars] = useState<Car[]>([]);
+	const [touchInputs, setTouchInputs] = useState<PlayerInputs>({});
+	const pressedKeysRef = useRef<Set<string>>(new Set());
+	const keyboardInputsRef = useRef<PlayerInputs>({});
+
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			pressedKeysRef.current.add(e.code);
+			updateKeyboardInputs();
+		};
+
+		const handleKeyUp = (e: KeyboardEvent) => {
+			pressedKeysRef.current.delete(e.code);
+			updateKeyboardInputs();
+		};
+
+		const updateKeyboardInputs = () => {
+			const inputs: PlayerInputs = {};
+			for (let i = 0; i < raceConfig.humanPlayers; i++) {
+				const controls = KEYBOARD_CONTROLS[i];
+				if (controls) {
+					const hasAccelerate = pressedKeysRef.current.has(controls.accelerate);
+					const hasAlternate = 'alternate' in controls && pressedKeysRef.current.has(controls.alternate as string);
+					inputs[i] = {
+						accelerate: hasAccelerate || hasAlternate,
+						brake: pressedKeysRef.current.has(controls.brake),
+						turnLeft: pressedKeysRef.current.has(controls.turnLeft),
+						turnRight: pressedKeysRef.current.has(controls.turnRight),
+					};
+				}
+			}
+			keyboardInputsRef.current = inputs;
+		};
+
+		window.addEventListener('keydown', handleKeyDown);
+		window.addEventListener('keyup', handleKeyUp);
+
+		return () => {
+			window.removeEventListener('keydown', handleKeyDown);
+			window.removeEventListener('keyup', handleKeyUp);
+		};
+	}, [raceConfig.humanPlayers]);
+
+	const getCombinedInputs = useCallback((): PlayerInputs => {
+		const combined: PlayerInputs = {};
+		for (let i = 0; i < raceConfig.humanPlayers; i++) {
+			const keyboard = keyboardInputsRef.current[i] || { accelerate: false, brake: false, turnLeft: false, turnRight: false };
+			const touch = touchInputs[i] || { accelerate: false, brake: false, turnLeft: false, turnRight: false };
+			combined[i] = {
+				accelerate: keyboard.accelerate || touch.accelerate,
+				brake: keyboard.brake || touch.brake,
+				turnLeft: keyboard.turnLeft || touch.turnLeft,
+				turnRight: keyboard.turnRight || touch.turnRight,
+			};
+		}
+		return combined;
+	}, [raceConfig.humanPlayers, touchInputs]);
+
+	const initializeRace = useCallback(() => {
+		const usedColors = raceConfig.playerConfigs.map(p => p.color);
+		const usedNumbers = raceConfig.playerConfigs.map(p => p.number);
+		const aiCarsConfig = generateAICars(raceConfig.aiRacers, usedColors, usedNumbers);
+
+		const allCars: Car[] = [];
+		let lane = 0;
+
+		raceConfig.playerConfigs.forEach((config, index) => {
+			const carConfig: CarConfig = {
+				id: `player-${index}`,
+				color: config.color,
+				number: config.number,
+				isAI: false,
+				playerIndex: index,
+			};
+			allCars.push(createCar(carConfig, lane++, false));
+		});
+
+		aiCarsConfig.forEach((config, index) => {
+			const carConfig: CarConfig = {
+				id: `ai-${index}`,
+				color: config.color,
+				number: config.number,
+				isAI: true,
+			};
+			allCars.push(createCar(carConfig, lane++, true));
+		});
+
+		setCars(allCars);
+	}, [raceConfig]);
+
+	const handleStartRace = useCallback(() => {
+		initializeRace();
+		setGameState('countdown');
+	}, [initializeRace]);
+
+	const handleCountdownComplete = useCallback(() => {
+		setGameState('racing');
+	}, []);
+
+	const handleRaceFinished = useCallback(() => {
+		setGameState('finished');
+	}, []);
+
+	const handleRaceAgain = useCallback(() => {
+		setCars([]);
+		setTouchInputs({});
+		setGameState('setup');
+	}, []);
+
+	const handleCarsUpdate = useCallback((updatedCars: Car[]) => {
+		setCars(updatedCars);
+	}, []);
+
+	const playerColors = raceConfig.playerConfigs.map(p => p.color);
+
+	if (gameState === 'setup') {
+		return (
+			<>
+				{/* Home button */}
+				<Link
+					to="/"
+					style={{
+						position: 'fixed',
+						top: 16,
+						left: 16,
+						background: '#fff',
+						color: '#1a202c',
+						border: '2px solid #1a202c',
+						borderRadius: 8,
+						padding: '8px 16px',
+						fontSize: 14,
+						fontWeight: '600',
+						cursor: 'pointer',
+						boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+						zIndex: 1000,
+						textDecoration: 'none',
+						display: 'inline-flex',
+						alignItems: 'center',
+						gap: 6,
+						transition: 'all 0.3s ease',
+					}}
+				>
+					 Home
+				</Link>
+				<SetupScreen
+					config={raceConfig}
+					onConfigChange={setRaceConfig}
+					onStartRace={handleStartRace}
+				/>
+			</>
+		);
+	}
+
+	return (
+		<div style={{ position: 'fixed', inset: 0, backgroundColor: '#111827', overflow: 'hidden' }}>
+			{/* Home button */}
+			<Link
+				to="/"
+				style={{
+					position: 'fixed',
+					top: 16,
+					left: 16,
+					background: '#fff',
+					color: '#1a202c',
+					border: '2px solid #1a202c',
+					borderRadius: 8,
+					padding: '8px 16px',
+					fontSize: 14,
+					fontWeight: '600',
+					cursor: 'pointer',
+					boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+					zIndex: 1000,
+					textDecoration: 'none',
+					display: 'inline-flex',
+					alignItems: 'center',
+					gap: 6,
+					transition: 'all 0.3s ease',
+				}}
+			>
+				 Home
+			</Link>
+
+			<RaceCanvas
+				cars={cars}
+				isRacing={gameState === 'racing'}
+				targetLaps={raceConfig.laps}
+				playerInputs={getCombinedInputs()}
+				onCarsUpdate={handleCarsUpdate}
+				onRaceFinished={handleRaceFinished}
+			/>
+
+			<RaceHUD cars={cars} targetLaps={raceConfig.laps} />
+
+			{gameState !== 'finished' && (
+				<TouchControls
+					playerCount={raceConfig.humanPlayers}
+					playerColors={playerColors}
+					currentInputs={touchInputs}
+					onInputChange={setTouchInputs}
+				/>
+			)}
+
+			{gameState === 'countdown' && (
+				<Countdown onComplete={handleCountdownComplete} />
+			)}
+
+			{gameState === 'finished' && (
+				<EndScreen cars={cars} onRaceAgain={handleRaceAgain} />
+			)}
+		</div>
+	);
+}

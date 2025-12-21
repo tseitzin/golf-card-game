@@ -1,4 +1,4 @@
-import { Car, Position } from '../../types/race';
+import { Car, Position } from '../../../types/race';
 
 const CAR_LENGTH = 40;
 const CAR_WIDTH = 18;

@@ -4,8 +4,8 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import Home from './pages/Home.jsx'
-import GolfGame from './pages/GolfGame.jsx'
-import RaceGame from './pages/RaceGame.tsx'
+import GolfGame from './games/golf/GolfGame.jsx'
+import RaceGame from './games/race/RaceGame.tsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

@@ -1,5 +1,5 @@
-import { Position, TrackDimensions } from '../../types/race';
-import { COLORS, TRACK_CONFIG } from '../../constants/race';
+import { Position, TrackDimensions } from '../../../types/race';
+import { COLORS, TRACK_CONFIG } from '../../../constants/race/index.ts';
 
 export function calculateTrackDimensions(
   canvasWidth: number,
