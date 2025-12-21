@@ -18,6 +18,14 @@ const games = [
     emoji: '🏎️',
     color: '#DC2626',
   },
+  {
+    id: 'dots',
+    name: 'Dots and Boxes',
+    description: 'Strategic turn-based game. Draw lines to complete boxes and score points!',
+    path: '/dots',
+    emoji: '🔲',
+    color: '#3B82F6',
+  },
 ]
 
 export default function Home() {

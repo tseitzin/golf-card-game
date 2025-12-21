@@ -6,6 +6,7 @@ import ErrorBoundary from './components/ErrorBoundary.jsx'
 import Home from './pages/Home.jsx'
 import GolfGame from './games/golf/GolfGame.jsx'
 import RaceGame from './games/race/RaceGame.tsx'
+import DotsGame from './games/dots/DotsGame.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -15,6 +16,7 @@ createRoot(document.getElementById('root')).render(
           <Route path="/" element={<Home />} />
           <Route path="/golf" element={<GolfGame />} />
           <Route path="/race" element={<RaceGame />} />
+          <Route path="/dots" element={<DotsGame />} />
         </Routes>
       </BrowserRouter>
     </ErrorBoundary>
