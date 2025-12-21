@@ -53,14 +53,14 @@ export default function GameBoard({
 	const currentTheme = darkMode ? theme.dark : theme.light;
 	const currentPlayer = players[currentPlayerIndex];
 
-	const availableWidth = windowSize.width * 0.85;
-	const availableHeight = windowSize.height * 0.6;
+	const availableWidth = windowSize.width * 0.9;
+	const availableHeight = windowSize.height * 0.75;
 	const padding = 40;
 	const maxCellSize = Math.min(
 		(availableWidth - padding * 2) / boardSize,
 		(availableHeight - padding * 2) / boardSize
 	);
-	const cellSize = Math.max(12, Math.min(80, maxCellSize));
+	const cellSize = Math.max(12, Math.min(120, maxCellSize));
 	const dotRadius = Math.max(2, Math.min(6, cellSize * 0.15));
 	const lineWidth = Math.max(1.5, Math.min(4, cellSize * 0.1));
 
