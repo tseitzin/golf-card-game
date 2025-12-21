@@ -10,15 +10,14 @@ const games = [
     emoji: '⛳',
     color: '#14532D',
   },
-  // Add more games here as they're developed
-  // {
-  //   id: 'another-game',
-  //   name: 'Another Game',
-  //   description: 'Description of the game...',
-  //   path: '/another-game',
-  //   emoji: '🎴',
-  //   color: '#1e40af',
-  // },
+  {
+    id: 'race-game',
+    name: 'Race Game',
+    description: 'Fast-paced oval track racing with AI opponents. Control your car and race to victory!',
+    path: import.meta.env.PROD ? 'https://race-game-fef133c8d78c.herokuapp.com' : 'http://localhost:5176',
+    emoji: '🏎️',
+    color: '#DC2626',
+  },
 ]
 
 export default function Home() {
@@ -129,90 +128,101 @@ export default function Home() {
           margin: '0 auto',
         }}
       >
-        {games.map((game) => (
-          <Link
-            key={game.id}
-            to={game.path}
-            style={{
-              textDecoration: 'none',
-              color: 'inherit',
-            }}
-          >
-            <div
+        {games.map((game) => {
+          const isExternalLink = game.path.startsWith('http://') || game.path.startsWith('https://')
+          const LinkComponent = isExternalLink ? 'a' : Link
+          const linkProps = isExternalLink
+            ? { href: game.path, target: '_blank', rel: 'noopener noreferrer' }
+            : { to: game.path }
+
+          return (
+            <LinkComponent
+              key={game.id}
+              {...linkProps}
               style={{
-                backgroundColor: currentTheme.cardBg,
-                borderRadius: 16,
-                padding: 24,
-                border: `2px solid ${currentTheme.border}`,
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                height: '100%',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)'
-                e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.15)'
-                e.currentTarget.style.borderColor = game.color
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'
-                e.currentTarget.style.borderColor = currentTheme.border
+                textDecoration: 'none',
+                color: 'inherit',
               }}
             >
               <div
                 style={{
-                  fontSize: 48,
-                  marginBottom: 16,
-                  textAlign: 'center',
+                  backgroundColor: currentTheme.cardBg,
+                  borderRadius: 16,
+                  padding: 24,
+                  border: `2px solid ${currentTheme.border}`,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  height: '100%',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-4px)'
+                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.15)'
+                  e.currentTarget.style.borderColor = game.color
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'
+                  e.currentTarget.style.borderColor = currentTheme.border
                 }}
               >
-                {game.emoji}
-              </div>
-              <h2
-                style={{
-                  fontSize: 24,
-                  fontWeight: 'bold',
-                  color: currentTheme.text,
-                  marginBottom: 8,
-                  textAlign: 'center',
-                }}
-              >
-                {game.name}
-              </h2>
-              <p
-                style={{
-                  fontSize: 14,
-                  color: currentTheme.secondaryText,
-                  textAlign: 'center',
-                  lineHeight: 1.5,
-                }}
-              >
-                {game.description}
-              </p>
-              <div
-                style={{
-                  marginTop: 16,
-                  textAlign: 'center',
-                }}
-              >
-                <span
+                <div
                   style={{
-                    display: 'inline-block',
-                    backgroundColor: game.color,
-                    color: '#fff',
-                    padding: '8px 20px',
-                    borderRadius: 8,
-                    fontWeight: '600',
-                    fontSize: 14,
+                    fontSize: 48,
+                    marginBottom: 16,
+                    textAlign: 'center',
                   }}
                 >
-                  Play Now
-                </span>
+                  {game.emoji}
+                </div>
+                <h2
+                  style={{
+                    fontSize: 24,
+                    fontWeight: 'bold',
+                    color: currentTheme.text,
+                    marginBottom: 8,
+                    textAlign: 'center',
+                  }}
+                >
+                  {game.name}
+                  {isExternalLink && (
+                    <span style={{ marginLeft: 6, fontSize: 18 }}>↗</span>
+                  )}
+                </h2>
+                <p
+                  style={{
+                    fontSize: 14,
+                    color: currentTheme.secondaryText,
+                    textAlign: 'center',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {game.description}
+                </p>
+                <div
+                  style={{
+                    marginTop: 16,
+                    textAlign: 'center',
+                  }}
+                >
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      backgroundColor: game.color,
+                      color: '#fff',
+                      padding: '8px 20px',
+                      borderRadius: 8,
+                      fontWeight: '600',
+                      fontSize: 14,
+                    }}
+                  >
+                    Play Now
+                  </span>
+                </div>
               </div>
-            </div>
-          </Link>
-        ))}
+            </LinkComponent>
+          )
+        })}
       </div>
 
       {/* Coming Soon Placeholder */}
