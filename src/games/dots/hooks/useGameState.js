@@ -5,7 +5,7 @@ export function useGameState() {
 	const [players, setPlayers] = useState([]);
 	const [boardSize, setBoardSize] = useState(4);
 	const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
-	const [lines, setLines] = useState(new Set());
+	const [lines, setLines] = useState({});
 	const [boxes, setBoxes] = useState({});
 	const [gameOver, setGameOver] = useState(false);
 	const [winner, setWinner] = useState(null);
@@ -16,7 +16,7 @@ export function useGameState() {
 		setPlayers(config.players);
 		setBoardSize(config.boardSize);
 		setCurrentPlayerIndex(0);
-		setLines(new Set());
+		setLines({});
 		setBoxes({});
 		setGameOver(false);
 		setWinner(null);
@@ -25,7 +25,7 @@ export function useGameState() {
 
 	const resetGame = useCallback(() => {
 		setCurrentPlayerIndex(0);
-		setLines(new Set());
+		setLines({});
 		setBoxes({});
 		setGameOver(false);
 		setWinner(null);
@@ -43,10 +43,10 @@ export function useGameState() {
 		const rightLine = lineKey(row, col + 1, false);
 
 		return (
-			newLines.has(topLine) &&
-			newLines.has(bottomLine) &&
-			newLines.has(leftLine) &&
-			newLines.has(rightLine)
+			newLines[topLine] !== undefined &&
+			newLines[bottomLine] !== undefined &&
+			newLines[leftLine] !== undefined &&
+			newLines[rightLine] !== undefined
 		);
 	}, [lineKey]);
 
@@ -55,12 +55,11 @@ export function useGameState() {
 
 		const key = lineKey(row, col, isHorizontal);
 
-		if (lines.has(key)) {
+		if (lines[key] !== undefined) {
 			return false;
 		}
 
-		const newLines = new Set(lines);
-		newLines.add(key);
+		const newLines = { ...lines, [key]: currentPlayerIndex };
 		setLines(newLines);
 
 		let completedBoxes = 0;
@@ -127,8 +126,8 @@ export function useGameState() {
 		const previousPlayer = players[lastMove.previousPlayerIndex];
 		if (previousPlayer?.isComputer) return false;
 
-		const newLines = new Set(lines);
-		newLines.delete(lastMove.line);
+		const newLines = { ...lines };
+		delete newLines[lastMove.line];
 		setLines(newLines);
 
 		const newBoxes = { ...boxes };

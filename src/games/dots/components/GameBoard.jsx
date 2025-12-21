@@ -68,12 +68,12 @@ export default function GameBoard({
 		return `${row},${col},${isHorizontal ? 'h' : 'v'}`;
 	};
 
-	const isLineDrawn = (row, col, isHorizontal) => {
-		return lines.has(lineKey(row, col, isHorizontal));
+	const getLineOwner = (row, col, isHorizontal) => {
+		return lines[lineKey(row, col, isHorizontal)];
 	};
 
 	const handleLineClick = (row, col, isHorizontal) => {
-		if (!isLineDrawn(row, col, isHorizontal) && !currentPlayer.isComputer) {
+		if (getLineOwner(row, col, isHorizontal) === undefined && !currentPlayer.isComputer) {
 			onLineClick(row, col, isHorizontal);
 		}
 	};
@@ -92,7 +92,8 @@ export default function GameBoard({
 
 	const renderLine = (row, col, isHorizontal) => {
 		const key = lineKey(row, col, isHorizontal);
-		const drawn = isLineDrawn(row, col, isHorizontal);
+		const ownerIndex = getLineOwner(row, col, isHorizontal);
+		const drawn = ownerIndex !== undefined;
 		const isHovered = hoveredLine === key;
 
 		const x1 = col * cellSize;
@@ -104,6 +105,8 @@ export default function GameBoard({
 		const midY = (y1 + y2) / 2;
 		const hitboxPadding = 12;
 
+		const lineColor = drawn ? players[ownerIndex].color : (isHovered ? currentTheme.hoverColor : 'transparent');
+
 		return (
 			<g key={key}>
 				<line
@@ -111,7 +114,7 @@ export default function GameBoard({
 					y1={y1}
 					x2={x2}
 					y2={y2}
-					stroke={drawn ? currentPlayer.color : (isHovered ? currentTheme.hoverColor : 'transparent')}
+					stroke={lineColor}
 					strokeWidth={lineWidth}
 					strokeLinecap="round"
 				/>

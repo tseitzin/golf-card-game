@@ -4,7 +4,7 @@ export function findBestMove(boardSize, lines, boxes, lineKey, checkBoxCompletio
 	for (let row = 0; row < boardSize; row++) {
 		for (let col = 0; col < boardSize - 1; col++) {
 			const hKey = lineKey(row, col, true);
-			if (!lines.has(hKey)) {
+			if (lines[hKey] === undefined) {
 				availableMoves.push({ row, col, isHorizontal: true });
 			}
 		}
@@ -13,7 +13,7 @@ export function findBestMove(boardSize, lines, boxes, lineKey, checkBoxCompletio
 	for (let row = 0; row < boardSize - 1; row++) {
 		for (let col = 0; col < boardSize; col++) {
 			const vKey = lineKey(row, col, false);
-			if (!lines.has(vKey)) {
+			if (lines[vKey] === undefined) {
 				availableMoves.push({ row, col, isHorizontal: false });
 			}
 		}
@@ -26,9 +26,9 @@ export function findBestMove(boardSize, lines, boxes, lineKey, checkBoxCompletio
 	const riskyMoves = [];
 
 	for (const move of availableMoves) {
-		const testLines = new Set(lines);
+		const testLines = { ...lines };
 		const key = lineKey(move.row, move.col, move.isHorizontal);
-		testLines.add(key);
+		testLines[key] = 0;
 
 		let completesBox = false;
 		for (let r = 0; r < boardSize - 1; r++) {
@@ -101,7 +101,7 @@ function wouldCreateThreeSidedBox(move, testLines, boardSize, lineKey, boxes) {
 		const rightLine = lineKey(box.row, box.col + 1, false);
 
 		const sidesComplete = [topLine, bottomLine, leftLine, rightLine].filter(
-			line => testLines.has(line)
+			line => testLines[line] !== undefined
 		).length;
 
 		if (sidesComplete === 3) {
