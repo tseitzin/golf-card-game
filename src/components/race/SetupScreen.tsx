@@ -109,10 +109,10 @@ export function SetupScreen({ config, onConfigChange, onStartRace }: SetupScreen
     >
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-6xl font-black text-white drop-shadow-lg mb-2">
+          <h1 className="text-4xl md:text-6xl font-black mb-2" style={{ color: '#ffffff', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
             Race Setup
           </h1>
-          <p className="text-white/80 text-lg">Configure your race and get ready to go!</p>
+          <p className="text-lg" style={{ color: 'rgba(255,255,255,0.8)' }}>Configure your race and get ready to go!</p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-4 mb-6">
