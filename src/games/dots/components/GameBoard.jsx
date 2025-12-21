@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function GameBoard({
 	players,
@@ -10,6 +10,22 @@ export default function GameBoard({
 	darkMode,
 }) {
 	const [hoveredLine, setHoveredLine] = useState(null);
+	const [windowSize, setWindowSize] = useState({
+		width: typeof window !== 'undefined' ? window.innerWidth : 1200,
+		height: typeof window !== 'undefined' ? window.innerHeight : 800,
+	});
+
+	useEffect(() => {
+		const handleResize = () => {
+			setWindowSize({
+				width: window.innerWidth,
+				height: window.innerHeight,
+			});
+		};
+
+		window.addEventListener('resize', handleResize);
+		return () => window.removeEventListener('resize', handleResize);
+	}, []);
 
 	const theme = {
 		light: {
@@ -35,9 +51,16 @@ export default function GameBoard({
 	const currentTheme = darkMode ? theme.dark : theme.light;
 	const currentPlayer = players[currentPlayerIndex];
 
-	const cellSize = Math.max(25, Math.min(80, 600 / boardSize));
-	const dotRadius = Math.max(3, Math.min(6, cellSize * 0.15));
-	const lineWidth = Math.max(2, Math.min(4, cellSize * 0.1));
+	const availableWidth = windowSize.width * 0.85;
+	const availableHeight = windowSize.height * 0.6;
+	const padding = 40;
+	const maxCellSize = Math.min(
+		(availableWidth - padding * 2) / boardSize,
+		(availableHeight - padding * 2) / boardSize
+	);
+	const cellSize = Math.max(12, Math.min(80, maxCellSize));
+	const dotRadius = Math.max(2, Math.min(6, cellSize * 0.15));
+	const lineWidth = Math.max(1.5, Math.min(4, cellSize * 0.1));
 
 	const lineKey = (row, col, isHorizontal) => {
 		return `${row},${col},${isHorizontal ? 'h' : 'v'}`;
@@ -159,7 +182,6 @@ export default function GameBoard({
 
 	const boardWidth = (boardSize - 1) * cellSize;
 	const boardHeight = (boardSize - 1) * cellSize;
-	const padding = 40;
 
 	const scores = players.map((player, idx) => ({
 		...player,
@@ -242,9 +264,6 @@ export default function GameBoard({
 					borderRadius: 16,
 					padding: padding,
 					boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-					maxWidth: '90vw',
-					maxHeight: '70vh',
-					overflow: 'auto',
 				}}
 			>
 				<svg
@@ -252,7 +271,6 @@ export default function GameBoard({
 					height={boardHeight + padding * 2}
 					style={{
 						display: 'block',
-						minWidth: 'fit-content',
 					}}
 				>
 					<g transform={`translate(${padding}, ${padding})`}>
