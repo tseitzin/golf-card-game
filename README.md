@@ -1,6 +1,8 @@
-# Golf Card Game 🏌️‍♂️🃏
+# My Online Games 🎮
 
-A digital implementation of the card game "Golf" (also known as "Play Nine") built with React and Vite. Play against computer opponents or with friends in this strategic card game where the lowest score wins!
+A collection of online multiplayer games built with React and Vite, including:
+- **Golf Card Game** 🏌️‍♂️🃏 - A digital card game where the lowest score wins
+- **Race Game** 🏁 - An exciting racing game
 
 ## 🎮 Game Rules
 
@@ -48,7 +50,7 @@ The player with the **lowest total score** after 9 holes wins!
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd golf-card-game
+cd my-online-games
 ```
 
 2. Install dependencies:
