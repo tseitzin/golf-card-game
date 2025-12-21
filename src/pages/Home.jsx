@@ -14,7 +14,7 @@ const games = [
     id: 'race-game',
     name: 'Race Game',
     description: 'Fast-paced oval track racing with AI opponents. Control your car and race to victory!',
-    path: import.meta.env.PROD ? 'https://race-game-fef133c8d78c.herokuapp.com' : 'http://localhost:5176',
+    path: '/race',
     emoji: '🏎️',
     color: '#DC2626',
   },
@@ -128,22 +128,15 @@ export default function Home() {
           margin: '0 auto',
         }}
       >
-        {games.map((game) => {
-          const isExternalLink = game.path.startsWith('http://') || game.path.startsWith('https://')
-          const LinkComponent = isExternalLink ? 'a' : Link
-          const linkProps = isExternalLink
-            ? { href: game.path, target: '_blank', rel: 'noopener noreferrer' }
-            : { to: game.path }
-
-          return (
-            <LinkComponent
-              key={game.id}
-              {...linkProps}
-              style={{
-                textDecoration: 'none',
-                color: 'inherit',
-              }}
-            >
+        {games.map((game) => (
+          <Link
+            key={game.id}
+            to={game.path}
+            style={{
+              textDecoration: 'none',
+              color: 'inherit',
+            }}
+          >
               <div
                 style={{
                   backgroundColor: currentTheme.cardBg,
@@ -185,9 +178,6 @@ export default function Home() {
                   }}
                 >
                   {game.name}
-                  {isExternalLink && (
-                    <span style={{ marginLeft: 6, fontSize: 18 }}>↗</span>
-                  )}
                 </h2>
                 <p
                   style={{
@@ -220,9 +210,8 @@ export default function Home() {
                   </span>
                 </div>
               </div>
-            </LinkComponent>
-          )
-        })}
+          </Link>
+        ))}
       </div>
 
       {/* Coming Soon Placeholder */}
