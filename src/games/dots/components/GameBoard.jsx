@@ -35,9 +35,9 @@ export default function GameBoard({
 	const currentTheme = darkMode ? theme.dark : theme.light;
 	const currentPlayer = players[currentPlayerIndex];
 
-	const cellSize = Math.max(40, Math.min(80, 400 / boardSize));
-	const dotRadius = 6;
-	const lineWidth = 4;
+	const cellSize = Math.max(25, Math.min(80, 600 / boardSize));
+	const dotRadius = Math.max(3, Math.min(6, cellSize * 0.15));
+	const lineWidth = Math.max(2, Math.min(4, cellSize * 0.1));
 
 	const lineKey = (row, col, isHorizontal) => {
 		return `${row},${col},${isHorizontal ? 'h' : 'v'}`;
@@ -148,7 +148,7 @@ export default function GameBoard({
 					textAnchor="middle"
 					dominantBaseline="central"
 					fill={player.color}
-					fontSize={Math.max(16, cellSize * 0.4)}
+					fontSize={Math.max(10, cellSize * 0.5)}
 					fontWeight="bold"
 				>
 					{player.name.charAt(0).toUpperCase()}
@@ -242,6 +242,9 @@ export default function GameBoard({
 					borderRadius: 16,
 					padding: padding,
 					boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+					maxWidth: '90vw',
+					maxHeight: '70vh',
+					overflow: 'auto',
 				}}
 			>
 				<svg
@@ -249,6 +252,7 @@ export default function GameBoard({
 					height={boardHeight + padding * 2}
 					style={{
 						display: 'block',
+						minWidth: 'fit-content',
 					}}
 				>
 					<g transform={`translate(${padding}, ${padding})`}>

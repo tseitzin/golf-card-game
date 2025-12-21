@@ -4,7 +4,7 @@ const PLAYER_COLORS = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B'];
 
 export default function SetupScreen({ onStartGame, darkMode }) {
 	const [playerCount, setPlayerCount] = useState(2);
-	const [boardSize, setBoardSize] = useState(4);
+	const [boardSize, setBoardSize] = useState('10');
 	const [players, setPlayers] = useState([
 		{ name: 'Player 1', isComputer: false, color: PLAYER_COLORS[0] },
 		{ name: 'Player 2', isComputer: false, color: PLAYER_COLORS[1] },
@@ -68,6 +68,11 @@ export default function SetupScreen({ onStartGame, darkMode }) {
 		setError('');
 	};
 
+	const handleBoardSizeChange = (value) => {
+		setBoardSize(value);
+		setError('');
+	};
+
 	const handleStartGame = () => {
 		const humanPlayers = players.filter(p => !p.isComputer).length;
 
@@ -82,9 +87,15 @@ export default function SetupScreen({ onStartGame, darkMode }) {
 			return;
 		}
 
+		const size = parseInt(boardSize, 10);
+		if (isNaN(size) || size < 3 || size > 30) {
+			setError('Grid size must be between 3 and 30');
+			return;
+		}
+
 		onStartGame({
 			players,
-			boardSize,
+			boardSize: size,
 		});
 	};
 
@@ -180,35 +191,37 @@ export default function SetupScreen({ onStartGame, darkMode }) {
 							marginBottom: 8,
 						}}
 					>
-						Board Size
+						Grid Size (e.g., 20 for a 20x20 grid)
 					</label>
-					<div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-						{[
-							{ size: 3, label: '3x3 (Beginner)' },
-							{ size: 4, label: '4x4' },
-							{ size: 5, label: '5x5' },
-							{ size: 6, label: '6x6 (Advanced)' },
-						].map(({ size, label }) => (
-							<button
-								key={size}
-								onClick={() => setBoardSize(size)}
-								style={{
-									flex: '1 1 calc(50% - 4px)',
-									padding: '10px',
-									borderRadius: 8,
-									border: `2px solid ${boardSize === size ? '#10B981' : currentTheme.border}`,
-									backgroundColor: boardSize === size ? '#10B981' : currentTheme.inputBg,
-									color: boardSize === size ? '#fff' : currentTheme.text,
-									fontSize: 14,
-									fontWeight: '600',
-									cursor: 'pointer',
-									transition: 'all 0.2s ease',
-								}}
-							>
-								{label}
-							</button>
-						))}
-					</div>
+					<input
+						type="number"
+						min="3"
+						max="30"
+						value={boardSize}
+						onChange={(e) => handleBoardSizeChange(e.target.value)}
+						placeholder="Enter grid size"
+						style={{
+							width: '100%',
+							padding: '12px 16px',
+							borderRadius: 8,
+							border: `2px solid ${currentTheme.inputBorder}`,
+							backgroundColor: currentTheme.inputBg,
+							color: currentTheme.text,
+							fontSize: 16,
+							fontWeight: '600',
+							textAlign: 'center',
+						}}
+					/>
+					<p
+						style={{
+							fontSize: 12,
+							color: currentTheme.secondaryText,
+							marginTop: 6,
+							textAlign: 'center',
+						}}
+					>
+						Choose between 3 and 30 (Recommended: 10-15 for a good game)
+					</p>
 				</div>
 
 				<div style={{ marginBottom: 24 }}>
