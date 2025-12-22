@@ -12,10 +12,15 @@ const CheckerPiece = ({ piece, isSelected, isDragging }) => {
 
   return (
     <div
-      className="relative w-full h-full flex items-center justify-center pointer-events-none"
+      className="absolute inset-0 flex items-center justify-center pointer-events-none"
+      style={{
+        width: '100%',
+        height: '100%',
+        overflow: 'hidden'
+      }}
     >
       <div
-        className="relative rounded-full shadow-lg flex items-center justify-center cursor-pointer"
+        className="rounded-full shadow-lg flex items-center justify-center cursor-pointer"
         style={{
           width: '80%',
           height: '80%',
@@ -23,22 +28,28 @@ const CheckerPiece = ({ piece, isSelected, isDragging }) => {
           minHeight: '80%',
           maxWidth: '80%',
           maxHeight: '80%',
+          boxSizing: 'border-box',
           background: `radial-gradient(circle at 30% 30%, ${pieceLightColor}, ${pieceColor})`,
           border: isSelected ? '3px solid #fbbf24' : '2px solid rgba(0,0,0,0.2)',
           boxShadow: isSelected
             ? '0 8px 16px rgba(0,0,0,0.3), 0 0 20px rgba(251, 191, 36, 0.5)'
             : '0 4px 8px rgba(0,0,0,0.2)',
-          transform: 'none',
-          animation: 'none'
+          transform: 'none !important',
+          animation: 'none !important',
+          overflow: 'hidden',
+          flexShrink: 0,
+          flexGrow: 0
         }}
       >
         {isKing && (
           <Crown
-            className="text-yellow-300"
-            size={20}
+            size={18}
             strokeWidth={2.5}
-            fill="#fde047"
-            style={{ flexShrink: 0 }}
+            style={{
+              flexShrink: 0,
+              color: '#fde047',
+              fill: '#fde047'
+            }}
           />
         )}
       </div>
