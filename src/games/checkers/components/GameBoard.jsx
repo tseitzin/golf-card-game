@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
 import CheckerPiece from './CheckerPiece';
 import { BOARD_SIZE, SQUARE_COLORS } from '../constants';
 
@@ -109,63 +108,51 @@ const GameBoard = ({
             const isHint = isHintSquare(rowIndex, colIndex);
             const isDark = isDarkSquare(rowIndex, colIndex);
 
+            const bgColor = isLastMove
+              ? '#fbbf24'
+              : isHint
+              ? '#a78bfa'
+              : isDark
+              ? SQUARE_COLORS.DARK
+              : SQUARE_COLORS.LIGHT;
+
             return (
-              <motion.div
+              <div
                 key={`${rowIndex}-${colIndex}`}
                 className="relative flex items-center justify-center cursor-pointer"
                 style={{
-                  backgroundColor: isDark ? SQUARE_COLORS.DARK : SQUARE_COLORS.LIGHT
+                  backgroundColor: bgColor,
+                  transition: 'background-color 0.3s ease'
                 }}
                 onClick={() => handleClick(rowIndex, colIndex)}
                 onDragOver={(e) => handleDragOver(e, rowIndex, colIndex)}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, rowIndex, colIndex)}
-                animate={{
-                  backgroundColor: isLastMove
-                    ? '#fbbf24'
-                    : isHint
-                    ? '#a78bfa'
-                    : isDark
-                    ? SQUARE_COLORS.DARK
-                    : SQUARE_COLORS.LIGHT
-                }}
-                transition={{ duration: 0.3 }}
               >
                 {isSelected && (
-                  <motion.div
-                    className="absolute inset-0 bg-yellow-400 opacity-40"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 0.4 }}
+                  <div
+                    className="absolute inset-0 bg-yellow-400"
+                    style={{ opacity: 0.4 }}
                   />
                 )}
 
                 {isValidMove && (
-                  <motion.div
+                  <div
                     className={`absolute rounded-full ${
                       isMandatory ? 'bg-red-500' : 'bg-blue-500'
                     }`}
                     style={{
                       width: '40%',
-                      height: '40%'
-                    }}
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{
-                      scale: [1, 1.2, 1],
-                      opacity: [0.6, 0.8, 0.6]
-                    }}
-                    transition={{
-                      duration: 1.5,
-                      repeat: Infinity,
-                      ease: 'easeInOut'
+                      height: '40%',
+                      opacity: 0.6
                     }}
                   />
                 )}
 
                 {isDragOver && (
-                  <motion.div
-                    className="absolute inset-0 bg-blue-400 opacity-30"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 0.3 }}
+                  <div
+                    className="absolute inset-0 bg-blue-400"
+                    style={{ opacity: 0.3 }}
                   />
                 )}
 
@@ -184,7 +171,7 @@ const GameBoard = ({
                     />
                   </div>
                 )}
-              </motion.div>
+              </div>
             );
           })
         )}
