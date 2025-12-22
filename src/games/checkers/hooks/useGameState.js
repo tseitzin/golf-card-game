@@ -8,7 +8,6 @@ import {
 } from '../constants';
 import {
   getValidMovesForPiece,
-  hasAnyCaptures,
   applyMove,
   canContinueCapture,
   hasLegalMoves,
@@ -109,8 +108,7 @@ export const useGameState = () => {
       return;
     }
 
-    const mustCapture = hasAnyCaptures(board, currentTurn);
-    const moves = getValidMovesForPiece(board, row, col, mustCapture);
+    const moves = getValidMovesForPiece(board, row, col);
 
     if (moves.length === 0) {
       return;

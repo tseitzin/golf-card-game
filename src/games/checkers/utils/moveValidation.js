@@ -49,7 +49,7 @@ export const getValidMoves = (board, row, col) => {
     }
   }
 
-  return captures.length > 0 ? captures : moves;
+  return [...captures, ...moves];
 };
 
 export const getAllCaptures = (board, color) => {
@@ -75,17 +75,11 @@ export const hasAnyCaptures = (board, color) => {
   return getAllCaptures(board, color).length > 0;
 };
 
-export const getValidMovesForPiece = (board, row, col, mustCapture = false) => {
+export const getValidMovesForPiece = (board, row, col) => {
   const piece = board[row][col];
   if (!piece) return [];
 
-  const moves = getValidMoves(board, row, col);
-
-  if (mustCapture) {
-    return moves.filter(m => m.isCapture);
-  }
-
-  return moves;
+  return getValidMoves(board, row, col);
 };
 
 export const canContinueCapture = (board, row, col) => {
