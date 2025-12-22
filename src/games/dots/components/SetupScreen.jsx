@@ -1,6 +1,15 @@
 import { useState } from 'react';
 
-const PLAYER_COLORS = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B'];
+const PLAYER_COLORS = [
+	'#3B82F6', // Blue
+	'#EF4444', // Red
+	'#10B981', // Green
+	'#F59E0B', // Amber
+	'#8B5CF6', // Purple
+	'#EC4899', // Pink
+	'#06B6D4', // Cyan
+	'#F97316', // Orange
+];
 
 export default function SetupScreen({ onStartGame, darkMode }) {
 	const [playerCount, setPlayerCount] = useState(2);
@@ -317,7 +326,7 @@ export default function SetupScreen({ onStartGame, darkMode }) {
 								</div>
 							</div>
 
-							<div>
+							<div style={{ marginBottom: 12 }}>
 								<label
 									style={{
 										display: 'block',
@@ -344,6 +353,58 @@ export default function SetupScreen({ onStartGame, darkMode }) {
 										fontWeight: '500',
 									}}
 								/>
+							</div>
+
+							<div>
+								<label
+									style={{
+										display: 'block',
+										fontSize: 12,
+										fontWeight: '600',
+										color: currentTheme.secondaryText,
+										marginBottom: 6,
+									}}
+								>
+									Color
+								</label>
+								<div style={{ position: 'relative', display: 'inline-block' }}>
+									<input
+										type="color"
+										value={player.color}
+										onChange={(e) => handlePlayerChange(index, 'color', e.target.value)}
+										style={{
+											position: 'absolute',
+											opacity: 0,
+											width: 40,
+											height: 40,
+											cursor: 'pointer',
+										}}
+										id={`color-picker-${index}`}
+									/>
+									<label
+										htmlFor={`color-picker-${index}`}
+										style={{
+											display: 'block',
+											width: 40,
+											height: 40,
+											borderRadius: '50%',
+											backgroundColor: player.color,
+											border: `3px solid ${currentTheme.border}`,
+											cursor: 'pointer',
+											boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+											transition: 'all 0.2s ease',
+										}}
+										onMouseEnter={(e) => {
+											e.currentTarget.style.transform = 'scale(1.1)';
+											e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+										}}
+										onMouseLeave={(e) => {
+											e.currentTarget.style.transform = 'scale(1)';
+											e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
+										}}
+										title="Click to change color"
+									/>
+								</div>
 							</div>
 						</div>
 					))}

@@ -105,7 +105,7 @@ export default function GameBoard({
 		const midY = (y1 + y2) / 2;
 		const hitboxPadding = 12;
 
-		const lineColor = drawn ? players[ownerIndex].color : (isHovered ? currentTheme.hoverColor : 'transparent');
+	const lineColor = drawn ? players[ownerIndex].color : (isHovered ? currentPlayer.color : 'transparent');
 
 		return (
 			<g key={key}>
