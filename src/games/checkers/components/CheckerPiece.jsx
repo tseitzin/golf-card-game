@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion';
 import { Crown } from 'lucide-react';
 import { PLAYER_COLORS, PIECE_TYPES, PIECE_COLORS } from '../constants';
 
@@ -12,16 +11,12 @@ const CheckerPiece = ({ piece, isSelected, isDragging }) => {
   const pieceLightColor = isRed ? PIECE_COLORS.RED_LIGHT : PIECE_COLORS.BLACK_LIGHT;
 
   return (
-    <motion.div
-      animate={{
-        y: isDragging ? -10 : 0
-      }}
-      transition={{
-        type: 'spring',
-        stiffness: 300,
-        damping: 20
-      }}
+    <div
       className="relative w-full h-full flex items-center justify-center pointer-events-none"
+      style={{
+        transform: isDragging ? 'translateY(-10px)' : 'translateY(0)',
+        transition: 'transform 0.2s ease'
+      }}
     >
       <div
         className="relative rounded-full shadow-lg flex items-center justify-center cursor-pointer"
@@ -44,7 +39,7 @@ const CheckerPiece = ({ piece, isSelected, isDragging }) => {
           />
         )}
       </div>
-    </motion.div>
+    </div>
   );
 };
 
