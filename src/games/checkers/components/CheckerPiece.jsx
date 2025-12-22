@@ -65,8 +65,7 @@ const CheckerPiece = ({ piece, isSelected, isDragging }) => {
             background: 'radial-gradient(circle, rgba(253, 224, 71, 0.3) 0%, transparent 70%)',
           }}
           animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.5, 0.8, 0.5]
+            opacity: [0.4, 0.7, 0.4]
           }}
           transition={{
             duration: 2,
