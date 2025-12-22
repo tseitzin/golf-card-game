@@ -39,41 +39,14 @@ const CheckerPiece = ({ piece, isSelected, isDragging }) => {
         whileHover={{ scale: 1.05 }}
       >
         {isKing && (
-          <motion.div
-            initial={{ scale: 0, rotate: -180 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{
-              type: 'spring',
-              stiffness: 200,
-              damping: 15
-            }}
-          >
-            <Crown
-              className="text-yellow-300"
-              size={24}
-              strokeWidth={2.5}
-              fill="#fde047"
-            />
-          </motion.div>
+          <Crown
+            className="text-yellow-300"
+            size={24}
+            strokeWidth={2.5}
+            fill="#fde047"
+          />
         )}
       </motion.div>
-
-      {isKing && (
-        <motion.div
-          className="absolute inset-0 rounded-full"
-          style={{
-            background: 'radial-gradient(circle, rgba(253, 224, 71, 0.3) 0%, transparent 70%)',
-          }}
-          animate={{
-            opacity: [0.4, 0.7, 0.4]
-          }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            ease: 'easeInOut'
-          }}
-        />
-      )}
     </motion.div>
   );
 };
