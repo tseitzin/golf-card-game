@@ -14,7 +14,6 @@ const CheckerPiece = ({ piece, isSelected, isDragging }) => {
   return (
     <motion.div
       animate={{
-        scale: isSelected ? 1.1 : 1,
         y: isDragging ? -10 : 0
       }}
       transition={{
@@ -24,7 +23,7 @@ const CheckerPiece = ({ piece, isSelected, isDragging }) => {
       }}
       className="relative w-full h-full flex items-center justify-center pointer-events-none"
     >
-      <motion.div
+      <div
         className="relative rounded-full shadow-lg flex items-center justify-center cursor-pointer"
         style={{
           width: '80%',
@@ -35,7 +34,6 @@ const CheckerPiece = ({ piece, isSelected, isDragging }) => {
             ? '0 8px 16px rgba(0,0,0,0.3), 0 0 20px rgba(251, 191, 36, 0.5)'
             : '0 4px 8px rgba(0,0,0,0.2)'
         }}
-        whileHover={{ scale: 1.05 }}
       >
         {isKing && (
           <Crown
@@ -45,7 +43,7 @@ const CheckerPiece = ({ piece, isSelected, isDragging }) => {
             fill="#fde047"
           />
         )}
-      </motion.div>
+      </div>
     </motion.div>
   );
 };
