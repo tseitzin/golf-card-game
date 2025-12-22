@@ -11,6 +11,23 @@ export function useGameState() {
 	const [winner, setWinner] = useState(null);
 	const [lastMove, setLastMove] = useState(null);
 	const aiTimeoutRef = useRef(null);
+	
+	// Use refs to track current state to avoid stale closures
+	const linesRef = useRef(lines);
+	const boxesRef = useRef(boxes);
+	const currentPlayerIndexRef = useRef(currentPlayerIndex);
+	
+	useEffect(() => {
+		linesRef.current = lines;
+	}, [lines]);
+	
+	useEffect(() => {
+		boxesRef.current = boxes;
+	}, [boxes]);
+	
+	useEffect(() => {
+		currentPlayerIndexRef.current = currentPlayerIndex;
+	}, [currentPlayerIndex]);
 
 	const initializeGame = useCallback((config) => {
 		setPlayers(config.players);
@@ -55,35 +72,56 @@ export function useGameState() {
 
 		const key = lineKey(row, col, isHorizontal);
 
-		if (lines[key] !== undefined) {
+		// Use refs to get the most current state
+		const currentLines = linesRef.current;
+		const currentBoxes = boxesRef.current;
+		const currentPlayer = currentPlayerIndexRef.current;
+
+		if (currentLines[key] !== undefined) {
 			return false;
 		}
 
-		const newLines = { ...lines, [key]: currentPlayerIndex };
-		setLines(newLines);
+		const newLines = { ...currentLines, [key]: currentPlayer };
 
 		let completedBoxes = 0;
-		const newBoxes = { ...boxes };
+		const newBoxes = { ...currentBoxes };
 		const boxesAdded = [];
 
 		for (let r = 0; r < boardSize - 1; r++) {
 			for (let c = 0; c < boardSize - 1; c++) {
 				const boxKey = `${r},${c}`;
-				if (!newBoxes[boxKey] && checkBoxCompletion(newLines, r, c)) {
-					newBoxes[boxKey] = currentPlayerIndex;
+				if (newBoxes[boxKey] === undefined && checkBoxCompletion(newLines, r, c)) {
+					newBoxes[boxKey] = currentPlayer;
 					boxesAdded.push(boxKey);
 					completedBoxes++;
 				}
 			}
 		}
 
-		setBoxes(newBoxes);
-
 		const totalBoxes = (boardSize - 1) * (boardSize - 1);
 		const boxesCompleted = Object.keys(newBoxes).length;
 
-		const previousPlayerIndex = currentPlayerIndex;
+		const previousPlayerIndex = currentPlayer;
 		const turnChanged = completedBoxes === 0;
+
+		// Determine next player
+		const nextPlayerIndex = completedBoxes === 0 
+			? (currentPlayer + 1) % players.length 
+			: currentPlayer;
+
+		// Update refs immediately before state updates
+		linesRef.current = newLines;
+		boxesRef.current = newBoxes;
+		if (completedBoxes === 0) {
+			currentPlayerIndexRef.current = nextPlayerIndex;
+		}
+
+		// Update all state together
+		setLines(newLines);
+		setBoxes(newBoxes);
+		if (completedBoxes === 0) {
+			setCurrentPlayerIndex(nextPlayerIndex);
+		}
 
 		setLastMove({
 			line: key,
@@ -110,12 +148,8 @@ export function useGameState() {
 			return true;
 		}
 
-		if (completedBoxes === 0) {
-			setCurrentPlayerIndex((currentPlayerIndex + 1) % players.length);
-		}
-
-		return true;
-	}, [gameOver, lines, boxes, currentPlayerIndex, players, boardSize, lineKey, checkBoxCompletion]);
+	return true;
+	}, [gameOver, players, boardSize, lineKey, checkBoxCompletion]);
 
 	const undoLastMove = useCallback(() => {
 		if (!lastMove || gameOver) return false;
