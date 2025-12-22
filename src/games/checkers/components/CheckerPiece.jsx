@@ -13,7 +13,6 @@ const CheckerPiece = ({ piece, isSelected, isDragging }) => {
 
   return (
     <motion.div
-      initial={{ scale: 0 }}
       animate={{
         scale: isSelected ? 1.1 : 1,
         y: isDragging ? -10 : 0
