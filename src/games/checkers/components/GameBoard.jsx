@@ -8,7 +8,8 @@ const GameBoard = ({
   validMoves,
   onSquareClick,
   lastMove,
-  currentHint
+  currentHint,
+  darkMode = false
 }) => {
   const [draggedPiece, setDraggedPiece] = useState(null);
   const [dragOverSquare, setDragOverSquare] = useState(null);
@@ -86,6 +87,8 @@ const GameBoard = ({
     onSquareClick(row, col);
   };
 
+  // Board background for dark mode
+  const boardBg = darkMode ? '#222b3a' : '#fff';
   return (
     <div className="flex items-center justify-center w-full p-4">
       <div
@@ -94,7 +97,8 @@ const GameBoard = ({
           gridTemplateColumns: `repeat(${BOARD_SIZE}, 1fr)`,
           width: 'min(90vw, 90vh, 600px)',
           height: 'min(90vw, 90vh, 600px)',
-          aspectRatio: '1/1'
+          aspectRatio: '1/1',
+          background: boardBg
         }}
       >
         {board.map((row, rowIndex) =>
@@ -108,13 +112,15 @@ const GameBoard = ({
             const isHint = isHintSquare(rowIndex, colIndex);
             const isDark = isDarkSquare(rowIndex, colIndex);
 
-            const bgColor = isLastMove
+
+            // Adjust square colors for dark mode
+            let bgColor = isLastMove
               ? '#fbbf24'
               : isHint
               ? '#a78bfa'
               : isDark
-              ? SQUARE_COLORS.DARK
-              : SQUARE_COLORS.LIGHT;
+              ? (darkMode ? '#374151' : SQUARE_COLORS.DARK)
+              : (darkMode ? '#e5e7eb' : SQUARE_COLORS.LIGHT);
 
             return (
               <div
