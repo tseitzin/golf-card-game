@@ -26,6 +26,14 @@ const games = [
     emoji: '🔲',
     color: '#3B82F6',
   },
+  {
+    id: 'checkers',
+    name: 'Checkers',
+    description: 'Kid-friendly checkers with drag-and-drop, AI opponents, hints, and undo. Perfect for learning!',
+    path: '/checkers',
+    emoji: '👑',
+    color: '#059669',
+  },
 ]
 
 export default function Home() {
