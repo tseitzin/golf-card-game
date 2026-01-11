@@ -174,6 +174,7 @@ const GameBoard = ({
                       piece={piece}
                       isSelected={isSelected}
                       isDragging={isDragging}
+                      darkMode={darkMode}
                     />
                   </div>
                 )}

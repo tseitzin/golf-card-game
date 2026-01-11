@@ -32,6 +32,11 @@ export const useGameState = () => {
   const [showHints, setShowHints] = useState(false);
   const [currentHint, setCurrentHint] = useState(null);
   const [difficulty, setDifficulty] = useState(AI_DIFFICULTY.MEDIUM);
+  // Track removed pieces for each player
+  const [removedPieces, setRemovedPieces] = useState({
+    [PLAYER_COLORS.RED]: [],
+    [PLAYER_COLORS.BLACK]: []
+  });
 
   const checkWinCondition = useCallback((newBoard, color) => {
     const opponentColor = color === PLAYER_COLORS.RED ? PLAYER_COLORS.BLACK : PLAYER_COLORS.RED;
@@ -54,14 +59,25 @@ export const useGameState = () => {
       from: { row: fromRow, col: fromCol },
       to: { row: toRow, col: toCol },
       capturedPiece,
-      turn: currentTurn
+      turn: currentTurn,
+      removedPieces: { ...removedPieces }
     };
 
     setHistory(prev => [...prev, moveRecord]);
     setBoard(newBoard);
     setLastMove({ from: { row: fromRow, col: fromCol }, to: { row: toRow, col: toCol } });
 
-    const wasCapture = capturedPiece !== null;
+    const wasCapture = capturedPiece !== null && capturedPiece.piece;
+
+    if (wasCapture) {
+      setRemovedPieces(prev => {
+        const color = capturedPiece.piece.color;
+        return {
+          ...prev,
+          [color]: [...prev[color], capturedPiece.piece]
+        };
+      });
+    }
 
     if (wasCapture && canContinueCapture(newBoard, toRow, toCol)) {
       setMultiJumpPiece({ row: toRow, col: toCol });
@@ -90,7 +106,7 @@ export const useGameState = () => {
     }
 
     return { newBoard, continueCapture: false };
-  }, [board, currentTurn, checkWinCondition]);
+  }, [board, currentTurn, checkWinCondition, removedPieces]);
 
   const selectPiece = useCallback((row, col) => {
     if (multiJumpPiece) {
@@ -141,10 +157,12 @@ export const useGameState = () => {
       setBoard(prevRecord ? prevRecord.board : createInitialBoard());
       setHistory(prevHistory);
       setCurrentTurn(prevRecord ? prevRecord.turn : PLAYER_COLORS.RED);
+      setRemovedPieces(prevRecord ? prevRecord.removedPieces : { [PLAYER_COLORS.RED]: [], [PLAYER_COLORS.BLACK]: [] });
     } else {
       setBoard(lastRecord.board);
       setHistory(prev => prev.slice(0, -1));
       setCurrentTurn(lastRecord.turn);
+      setRemovedPieces(lastRecord.removedPieces);
     }
 
     setSelectedPiece(null);
@@ -168,6 +186,7 @@ export const useGameState = () => {
     setLastMove(null);
     setMultiJumpPiece(null);
     setWinner(null);
+    setRemovedPieces({ [PLAYER_COLORS.RED]: [], [PLAYER_COLORS.BLACK]: [] });
     setMessage("Red's Turn!");
   }, []);
 
@@ -181,6 +200,7 @@ export const useGameState = () => {
     setLastMove(null);
     setMultiJumpPiece(null);
     setWinner(null);
+    setRemovedPieces({ [PLAYER_COLORS.RED]: [], [PLAYER_COLORS.BLACK]: [] });
     setMessage('');
   }, []);
 
@@ -265,6 +285,7 @@ export const useGameState = () => {
     startGame,
     resetGame,
     toggleHints,
-    getHintMove
+    getHintMove,
+    removedPieces
   };
 };

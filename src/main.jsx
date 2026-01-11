@@ -8,6 +8,7 @@ import GolfGame from './games/golf/GolfGame.jsx'
 import RaceGame from './games/race/RaceGame.tsx'
 import DotsGame from './games/dots/DotsGame.jsx'
 import CheckersGame from './games/checkers/CheckersGame.jsx'
+import ArcherFishGame from './games/archerfish/ArcherFishGame.tsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -19,6 +20,7 @@ createRoot(document.getElementById('root')).render(
           <Route path="/race" element={<RaceGame />} />
           <Route path="/dots" element={<DotsGame />} />
           <Route path="/checkers" element={<CheckersGame />} />
+          <Route path="/archerfish" element={<ArcherFishGame />} />
         </Routes>
       </BrowserRouter>
     </ErrorBoundary>

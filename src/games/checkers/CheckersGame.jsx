@@ -1,4 +1,3 @@
-
 import { motion } from 'framer-motion';
 import { Undo, Home, Lightbulb, HelpCircle } from 'lucide-react';
 import { useGameState } from './hooks/useGameState';
@@ -28,7 +27,8 @@ const CheckersGame = () => {
     startGame,
     resetGame,
     toggleHints,
-    getHintMove
+    getHintMove,
+    removedPieces
   } = useGameState();
 
   // Dark mode state and persistence
@@ -169,56 +169,24 @@ const CheckersGame = () => {
       </button>
       <div className="container mx-auto px-4 py-6">
         <div className="flex flex-col lg:flex-row gap-6 items-start justify-center">
-          <div className="w-full lg:w-auto">
-            <div className="bg-white rounded-2xl shadow-xl p-4 mb-4">
-              <div className="flex items-center justify-between mb-4">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={resetGame}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold text-gray-700 transition-colors"
-                >
-                  <Home size={20} />
-                  Menu
-                </motion.button>
-
-                <div className="text-center">
-                  <div
-                    className={`text-2xl font-bold ${
-                      currentTurn === 'red' ? 'text-red-500' : 'text-gray-700'
-                    }`}
-                  >
-                    {currentTurn === 'red' ? 'Red' : 'Black'}'s Turn
-                  </div>
-                </div>
-
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={undoMove}
-                  disabled={!canUndo}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-colors ${
-                    canUndo
-                      ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
-                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  }`}
-                >
-                  <Undo size={20} />
-                  Undo
-                </motion.button>
+          {/* Scoreboard (left) and GameBoard (center) */}
+          <div className="flex flex-row gap-8 items-start justify-center">
+            {/* Scoreboard (left) */}
+            <div className="flex flex-col gap-6 items-end pr-2">
+              <div className="bg-white rounded-xl shadow p-4 w-32 text-center">
+                <div className="font-bold text-red-500">Red</div>
+                <div className="text-sm mt-2">On board: {board.flat().filter(p => p && p.color === "red").length}</div>
+                <div className="text-sm">Removed: {removedPieces["red"].length}</div>
+                <div className="text-sm">Kings: {board.flat().filter(p => p && p.color === "red" && p.type === "king").length}</div>
               </div>
-
-              {message && (
-                <motion.div
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="text-center mb-4 p-3 bg-blue-50 text-blue-700 rounded-lg font-semibold"
-                >
-                  {message}
-                </motion.div>
-              )}
+              <div className="bg-white rounded-xl shadow p-4 w-32 text-center">
+                <div className="font-bold text-gray-700">Black</div>
+                <div className="text-sm mt-2">On board: {board.flat().filter(p => p && p.color === "black").length}</div>
+                <div className="text-sm">Removed: {removedPieces["black"].length}</div>
+                <div className="text-sm">Kings: {board.flat().filter(p => p && p.color === "black" && p.type === "king").length}</div>
+              </div>
             </div>
-
+            {/* Game board (center) */}
             <GameBoard
               board={board}
               selectedPiece={selectedPiece}
@@ -229,7 +197,6 @@ const CheckersGame = () => {
               darkMode={darkMode}
             />
           </div>
-
           <div className="w-full lg:w-80">
             <div className="bg-white rounded-2xl shadow-xl p-6 space-y-4">
               <h3 className="text-xl font-bold text-gray-800 mb-4">Parent/Teacher Mode</h3>

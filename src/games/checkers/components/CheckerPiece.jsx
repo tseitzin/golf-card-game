@@ -1,14 +1,22 @@
 import { Crown } from 'lucide-react';
 import { PLAYER_COLORS, PIECE_TYPES, PIECE_COLORS } from '../constants';
 
-const CheckerPiece = ({ piece, isSelected, isDragging }) => {
+
+const CheckerPiece = ({ piece, isSelected, isDragging, darkMode = false }) => {
   if (!piece) return null;
 
   const isRed = piece.color === PLAYER_COLORS.RED;
   const isKing = piece.type === PIECE_TYPES.KING;
 
-  const pieceColor = isRed ? PIECE_COLORS.RED : PIECE_COLORS.BLACK;
-  const pieceLightColor = isRed ? PIECE_COLORS.RED_LIGHT : PIECE_COLORS.BLACK_LIGHT;
+  // Adjust black piece color for dark mode
+  let pieceColor = isRed ? PIECE_COLORS.RED : PIECE_COLORS.BLACK;
+  let pieceLightColor = isRed ? PIECE_COLORS.RED_LIGHT : PIECE_COLORS.BLACK_LIGHT;
+
+  if (!isRed && darkMode) {
+    // Make black pieces more visible in dark mode
+    pieceColor = '#f3f4f6'; // light gray
+    pieceLightColor = '#a3a3a3'; // medium gray
+  }
 
   return (
     <div

@@ -34,6 +34,14 @@ const games = [
     emoji: '👑',
     color: '#059669',
   },
+  {
+    id: 'archerfish',
+    name: 'Archer Fish Racing',
+    description: 'Escape evil robots! Shoot water, dodge obstacles, and survive the longest!',
+    path: '/archerfish',
+    emoji: '🐠',
+    color: '#0EA5E9',
+  },
 ]
 
 export default function Home() {
