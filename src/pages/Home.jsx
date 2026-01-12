@@ -5,7 +5,7 @@ const games = [
   {
     id: 'golf',
     name: 'Golf',
-    description: 'A classic 6-card golf game. Flip cards, swap strategically, and aim for the lowest score!',
+    description: 'A classic 8-card golf game. Flip cards, swap strategically, and aim for the lowest score!',
     path: '/golf',
     emoji: '⛳',
     color: '#14532D',
