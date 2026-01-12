@@ -23,13 +23,24 @@ export interface Fish {
   frozenUntil: number;
   survivalTime: number;
   frozenTime: number;
+  lastWaterJetTime: number;
+  waterJetCooldown: number;
   controlKeys?: {
     up: string;
     down: string;
     left: string;
     right: string;
     boost: string;
+    shoot: string;
   };
+}
+
+export interface WaterJet {
+  id: string;
+  position: Position;
+  velocity: Velocity;
+  fishId: number;
+  createdAt: number;
 }
 
 export interface Robot {
@@ -52,6 +63,7 @@ export interface GameState {
   fish: Fish[];
   robots: Robot[];
   obstacles: Obstacle[];
+  waterJets: WaterJet[];
   gameTime: number;
   isPlaying: boolean;
   isPaused: boolean;

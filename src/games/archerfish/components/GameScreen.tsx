@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Pause, Play } from 'lucide-react';
-import type { GameConfig, GameState, Fish } from '../types';
+import type { GameConfig, GameState, Fish, WaterJet } from '../types';
 import { initializeFish, initializeRobots, initializeObstacles } from '../utils/gameInitializer';
 import { checkCollision, keepInBounds, resolveObstacleCollision } from '../utils/physics';
 import { updateAIFish, updateRobot } from '../utils/ai';
 import FishComponent from './FishComponent';
 import RobotComponent from './RobotComponent';
 import ObstacleComponent from './ObstacleComponent';
+import WaterJetComponent from './WaterJetComponent';
 
 interface GameScreenProps {
   config: GameConfig;
@@ -21,6 +22,7 @@ export default function GameScreen({ config, onGameEnd }: GameScreenProps) {
     fish: initializeFish(config, ARENA_WIDTH, ARENA_HEIGHT),
     robots: initializeRobots(config.numRobots, config.difficulty, ARENA_WIDTH, ARENA_HEIGHT),
     obstacles: initializeObstacles(ARENA_WIDTH, ARENA_HEIGHT),
+    waterJets: [],
     gameTime: config.duration,
     isPlaying: true,
     isPaused: false,
@@ -154,6 +156,57 @@ export default function GameScreen({ config, onGameEnd }: GameScreenProps) {
         };
       });
 
+      // Handle water jet shooting
+      let newWaterJets = [...prevState.waterJets];
+      updatedFish.forEach(fish => {
+        if (fish.isHuman && fish.controlKeys && !fish.isFrozen) {
+          const canShoot = currentTime - fish.lastWaterJetTime >= fish.waterJetCooldown;
+          if (keysPressed.current.has(fish.controlKeys.shoot) && canShoot) {
+            // Determine shoot direction from fish velocity
+            let shootVelX = fish.velocity.x;
+            let shootVelY = fish.velocity.y;
+            const speed = Math.sqrt(shootVelX * shootVelX + shootVelY * shootVelY);
+            
+            // If fish is nearly stationary, shoot to the right
+            if (speed < 0.5) {
+              shootVelX = 8;
+              shootVelY = 0;
+            } else {
+              // Shoot in direction fish is moving
+              shootVelX = (shootVelX / speed) * 8;
+              shootVelY = (shootVelY / speed) * 8;
+            }
+
+            const newWaterJet: WaterJet = {
+              id: `${fish.id}-${currentTime}`,
+              position: { x: fish.position.x, y: fish.position.y },
+              velocity: { x: shootVelX, y: shootVelY },
+              fishId: fish.id,
+              createdAt: currentTime,
+            };
+
+            newWaterJets.push(newWaterJet);
+            fish.lastWaterJetTime = currentTime;
+          }
+        }
+      });
+
+      // Update water jets
+      newWaterJets = newWaterJets.filter(jet => {
+        const age = currentTime - jet.createdAt;
+        const inBounds = jet.position.x >= 0 && jet.position.x <= ARENA_WIDTH &&
+                         jet.position.y >= 0 && jet.position.y <= ARENA_HEIGHT;
+        return age < 1000 && inBounds; // Remove after 1 second or out of bounds
+      });
+
+      newWaterJets = newWaterJets.map(jet => ({
+        ...jet,
+        position: {
+          x: jet.position.x + jet.velocity.x,
+          y: jet.position.y + jet.velocity.y,
+        },
+      }));
+
       const updatedRobots = prevState.robots.map(robot => {
         const frozenFish = updatedFish.filter(f => f.isFrozen);
         let robotPosition = robot.position;
@@ -232,10 +285,48 @@ export default function GameScreen({ config, onGameEnd }: GameScreenProps) {
         }
       });
 
+      // Handle water jet collisions with robots
+      const jetsToRemove = new Set<string>();
+      newWaterJets.forEach(jet => {
+        updatedRobots.forEach(robot => {
+          if (checkCollision(jet.position, robot.position, 30)) {
+            // Push robot away from water jet
+            const dx = robot.position.x - jet.position.x;
+            const dy = robot.position.y - jet.position.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            if (dist > 0) {
+              const pushStrength = 150;
+              const pushX = (dx / dist) * pushStrength;
+              const pushY = (dy / dist) * pushStrength;
+              
+              robot.position = {
+                x: robot.position.x + pushX,
+                y: robot.position.y + pushY,
+              };
+              
+              // Keep robot in bounds
+              robot.position = keepInBounds(
+                robot.position,
+                robot.velocity,
+                ARENA_WIDTH,
+                ARENA_HEIGHT
+              );
+            }
+            
+            jetsToRemove.add(jet.id);
+          }
+        });
+      });
+
+      // Remove water jets that hit robots
+      newWaterJets = newWaterJets.filter(jet => !jetsToRemove.has(jet.id));
+
       return {
         ...prevState,
         fish: updatedFish,
         robots: updatedRobots,
+        waterJets: newWaterJets,
         gameTime: remainingTime,
       };
     });
@@ -304,6 +395,10 @@ export default function GameScreen({ config, onGameEnd }: GameScreenProps) {
             <RobotComponent key={robot.id} robot={robot} />
           ))}
 
+          {gameState.waterJets.map(waterJet => (
+            <WaterJetComponent key={waterJet.id} waterJet={waterJet} />
+          ))}
+
           {gameState.isPaused && (
             <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
               <div className="bg-white rounded-2xl p-8 text-center">
@@ -318,10 +413,10 @@ export default function GameScreen({ config, onGameEnd }: GameScreenProps) {
           <div className="text-sm text-gray-600 text-center">
             Controls: {config.humanPlayers.filter(h => h).length > 0 && (
               <>
-                Player 1: Arrow Keys + Space
-                {config.humanPlayers[1] && ' | Player 2: WASD + Shift'}
-                {config.humanPlayers[2] && ' | Player 3: IJKL + Enter'}
-                {config.humanPlayers[3] && ' | Player 4: TFGH + Q'}
+                Player 1: Arrow Keys + Space (boost) + S (shoot)
+                {config.humanPlayers[1] && ' | Player 2: WASD + Shift (boost) + S (shoot)'}
+                {config.humanPlayers[2] && ' | Player 3: IJKL + Enter (boost) + S (shoot)'}
+                {config.humanPlayers[3] && ' | Player 4: TFGH + Q (boost) + S (shoot)'}
               </>
             )}
           </div>

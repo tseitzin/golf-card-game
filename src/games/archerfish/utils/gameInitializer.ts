@@ -3,10 +3,10 @@ import type { Fish, Robot, Obstacle, GameConfig, Difficulty } from '../types';
 const FISH_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'];
 
 const CONTROL_SCHEMES = [
-  { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', boost: ' ' },
-  { up: 'w', down: 's', left: 'a', right: 'd', boost: 'Shift' },
-  { up: 'i', down: 'k', left: 'j', right: 'l', boost: 'Enter' },
-  { up: 't', down: 'g', left: 'f', right: 'h', boost: 'q' },
+  { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', boost: ' ', shoot: 's' },
+  { up: 'w', down: 's', left: 'a', right: 'd', boost: 'Shift', shoot: 's' },
+  { up: 'i', down: 'k', left: 'j', right: 'l', boost: 'Enter', shoot: 's' },
+  { up: 't', down: 'g', left: 'f', right: 'h', boost: 'q', shoot: 's' },
 ];
 
 export function initializeFish(config: GameConfig, arenaWidth: number, arenaHeight: number): Fish[] {
@@ -29,6 +29,8 @@ export function initializeFish(config: GameConfig, arenaWidth: number, arenaHeig
       frozenUntil: 0,
       survivalTime: 0,
       frozenTime: 0,
+      lastWaterJetTime: 0,
+      waterJetCooldown: 3000,
       controlKeys: isHuman ? CONTROL_SCHEMES[humanPlayerIndex++] : undefined,
     };
 
