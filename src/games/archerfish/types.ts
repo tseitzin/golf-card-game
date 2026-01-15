@@ -75,6 +75,7 @@ export interface GameConfig {
   numRobots: number;
   humanPlayers: boolean[];
   playerNames: string[];
+  playerColors?: string[];
   duration: GameDuration;
   difficulty: Difficulty;
 }

@@ -24,7 +24,7 @@ export function initializeFish(config: GameConfig, arenaWidth: number, arenaHeig
       velocity: { x: 0, y: 0 },
       isHuman,
       name: config.playerNames[i],
-      color: FISH_COLORS[i],
+      color: config.playerColors?.[i] || FISH_COLORS[i],
       isFrozen: false,
       frozenUntil: 0,
       survivalTime: 0,

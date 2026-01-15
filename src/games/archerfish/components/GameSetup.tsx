@@ -7,11 +7,14 @@ interface GameSetupProps {
   onStartGame: (config: GameConfig) => void;
 }
 
+const DEFAULT_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'];
+
 export default function GameSetup({ onStartGame }: GameSetupProps) {
   const [numPlayers, setNumPlayers] = useState(2);
   const [numRobots, setNumRobots] = useState(1);
   const [humanPlayers, setHumanPlayers] = useState([true, false, false, false]);
   const [playerNames, setPlayerNames] = useState(['Player 1', 'AI 1', 'AI 2', 'AI 3']);
+  const [playerColors, setPlayerColors] = useState<string[]>(DEFAULT_COLORS);
   const [duration, setDuration] = useState<GameDuration>(120);
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -91,6 +94,12 @@ export default function GameSetup({ onStartGame }: GameSetupProps) {
     setPlayerNames(newPlayerNames);
   };
 
+  const handleColorChange = (index: number, color: string) => {
+    const newPlayerColors = [...playerColors];
+    newPlayerColors[index] = color;
+    setPlayerColors(newPlayerColors);
+  };
+
   const handleStartGame = () => {
     const activeHumanPlayers = humanPlayers.slice(0, numPlayers);
     const activePlayerNames = playerNames.slice(0, numPlayers);
@@ -113,6 +122,7 @@ export default function GameSetup({ onStartGame }: GameSetupProps) {
       numRobots,
       humanPlayers: activeHumanPlayers,
       playerNames: activePlayerNames,
+      playerColors: playerColors.slice(0, numPlayers),
       duration,
       difficulty,
     });
@@ -199,6 +209,21 @@ export default function GameSetup({ onStartGame }: GameSetupProps) {
                     >
                       {humanPlayers[index] ? 'Human' : 'AI'}
                     </button>
+                    <div className="relative">
+                      <div
+                        className="w-10 h-10 rounded-lg border-2 border-gray-300 cursor-pointer hover:border-gray-400 transition-all shadow-sm"
+                        style={{ backgroundColor: playerColors[index] }}
+                        onClick={() => document.getElementById(`color-picker-${index}`)?.click()}
+                        title="Click to change color"
+                      />
+                      <input
+                        id={`color-picker-${index}`}
+                        type="color"
+                        value={playerColors[index]}
+                        onChange={(e) => handleColorChange(index, e.target.value)}
+                        className="absolute opacity-0 w-0 h-0"
+                      />
+                    </div>
                     <input
                       type="text"
                       value={playerNames[index]}
