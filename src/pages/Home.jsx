@@ -128,7 +128,7 @@ export default function Home() {
             marginBottom: 12,
           }}
         >
-          🎴 Card Games
+          Fun Games!
         </h1>
         <p
           style={{

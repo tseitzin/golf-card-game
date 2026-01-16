@@ -106,3 +106,63 @@ export function getDistanceBetweenPoints(p1: Position, p2: Position): number {
   const dy = p1.y - p2.y;
   return Math.sqrt(dx * dx + dy * dy);
 }
+
+export function resolveRobotCollisions(
+  robots: Robot[],
+  robotRadius: number = 30
+): Robot[] {
+  const updatedRobots = robots.map(robot => ({ ...robot }));
+
+  // Check each pair of robots for collision
+  for (let i = 0; i < updatedRobots.length; i++) {
+    for (let j = i + 1; j < updatedRobots.length; j++) {
+      const robot1 = updatedRobots[i];
+      const robot2 = updatedRobots[j];
+
+      const dx = robot2.position.x - robot1.position.x;
+      const dy = robot2.position.y - robot1.position.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const minDistance = robotRadius * 2;
+
+      // If robots are overlapping
+      if (distance < minDistance && distance > 0) {
+        // Calculate collision normal
+        const normalX = dx / distance;
+        const normalY = dy / distance;
+
+        // Calculate overlap amount
+        const overlap = minDistance - distance;
+
+        // Push robots apart (half overlap each)
+        const pushX = normalX * (overlap / 2);
+        const pushY = normalY * (overlap / 2);
+
+        robot1.position.x -= pushX;
+        robot1.position.y -= pushY;
+        robot2.position.x += pushX;
+        robot2.position.y += pushY;
+
+        // Calculate relative velocity
+        const relVelX = robot2.velocity.x - robot1.velocity.x;
+        const relVelY = robot2.velocity.y - robot1.velocity.y;
+
+        // Calculate relative velocity in collision normal direction
+        const velAlongNormal = relVelX * normalX + relVelY * normalY;
+
+        // Only resolve if robots are moving toward each other
+        if (velAlongNormal < 0) {
+          // Bounce with damping (elastic collision)
+          const restitution = 0.7; // Bounciness factor
+          const impulse = -(1 + restitution) * velAlongNormal / 2;
+
+          robot1.velocity.x -= impulse * normalX;
+          robot1.velocity.y -= impulse * normalY;
+          robot2.velocity.x += impulse * normalX;
+          robot2.velocity.y += impulse * normalY;
+        }
+      }
+    }
+  }
+
+  return updatedRobots;
+}

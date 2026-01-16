@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Pause, Play } from 'lucide-react';
 import type { GameConfig, GameState, Fish, WaterJet } from '../types';
 import { initializeFish, initializeRobots, initializeObstacles } from '../utils/gameInitializer';
-import { checkCollision, keepInBounds, resolveObstacleCollision } from '../utils/physics';
+import { checkCollision, keepInBounds, resolveObstacleCollision, resolveRobotCollisions } from '../utils/physics';
 import { updateAIFish, updateRobot } from '../utils/ai';
 import FishComponent from './FishComponent';
 import RobotComponent from './RobotComponent';
@@ -268,6 +268,12 @@ export default function GameScreen({ config, onGameEnd }: GameScreenProps) {
           velocity: resolved.velocity,
           targetFishId: robotUpdate.targetFishId,
         };
+      });
+
+      // Resolve robot-to-robot collisions
+      const robotsAfterCollisions = resolveRobotCollisions(updatedRobots, 30);
+      robotsAfterCollisions.forEach((resolvedRobot, index) => {
+        updatedRobots[index] = resolvedRobot;
       });
 
       updatedFish.forEach(fish => {

@@ -175,8 +175,9 @@ export function updateRobot(
   let targetVelX = normalized.x * speed;
   let targetVelY = normalized.y * speed;
 
+  // Check for nearby obstacles with increased detection range
   const nearbyObstacle = obstacles.find(obs =>
-    checkObstacleCollision(robot.position, obs, 60)
+    checkObstacleCollision(robot.position, obs, 80)
   );
 
   if (nearbyObstacle) {
@@ -185,9 +186,11 @@ export function updateRobot(
 
     const awayX = robot.position.x - obstacleCenterX;
     const awayY = robot.position.y - obstacleCenterY;
+    const distanceToObstacle = Math.sqrt(awayX * awayX + awayY * awayY);
     const awayNormalized = normalizeVector(awayX, awayY);
 
-    const avoidStrength = 2;
+    // Stronger avoidance when closer to obstacle
+    const avoidStrength = distanceToObstacle < 50 ? 5 : 3;
     targetVelX += awayNormalized.x * avoidStrength;
     targetVelY += awayNormalized.y * avoidStrength;
   }
