@@ -61,6 +61,9 @@ export function initializeRobots(numRobots: number, difficulty: Difficulty, aren
       velocity: { x: 0, y: 0 },
       targetFishId: null,
       speed: speedMap[difficulty],
+      isStuck: false,
+      stuckUntil: 0,
+      stuckToObstacleId: null,
     });
   }
 
@@ -70,15 +73,19 @@ export function initializeRobots(numRobots: number, difficulty: Difficulty, aren
 export function initializeObstacles(arenaWidth: number, arenaHeight: number): Obstacle[] {
   const obstacles: Obstacle[] = [];
   const numObstacles = 6;
-  const types: Array<'seaweed' | 'island' | 'iceberg' | 'coral'> = ['seaweed', 'island', 'iceberg', 'coral'];
+  const regularTypes: Array<'seaweed' | 'island' | 'iceberg' | 'coral'> = ['seaweed', 'island', 'iceberg', 'coral'];
 
   const safeZoneLeft = 250;
   const safeZoneRight = arenaWidth - 250;
   const safeZoneTop = 150;
   const safeZoneBottom = arenaHeight - 150;
 
+  // Determine how many magnets to spawn (1 or 2)
+  const numMagnets = Math.random() < 0.5 ? 1 : 2;
+
   for (let i = 0; i < numObstacles; i++) {
-    const type = types[Math.floor(Math.random() * types.length)];
+    // First numMagnets obstacles will be magnets, rest will be regular types
+    const type = i < numMagnets ? 'magnet' : regularTypes[Math.floor(Math.random() * regularTypes.length)];
 
     let width, height;
     if (type === 'seaweed') {
@@ -90,6 +97,9 @@ export function initializeObstacles(arenaWidth: number, arenaHeight: number): Ob
     } else if (type === 'iceberg') {
       width = 80;
       height = 80;
+    } else if (type === 'magnet') {
+      width = 70;
+      height = 50;
     } else {
       width = 60;
       height = 50;

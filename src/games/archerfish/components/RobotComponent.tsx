@@ -58,7 +58,37 @@ export default function RobotComponent({ robot }: RobotComponentProps) {
       }}
     >
       <div className="relative">
-        <EvilRobotIcon className="w-16 h-16 text-red-600 drop-shadow-[0_0_8px_rgba(220,38,38,0.8)]" />
+        {robot.isStuck ? (
+          <>
+            {/* Stuck robot with electric/magnetic effects */}
+            <div className="relative animate-pulse">
+              {/* Blue magnetic glow */}
+              <div className="absolute inset-0 w-16 h-16">
+                <div className="absolute inset-0 bg-blue-400 rounded-full blur-xl opacity-60 animate-ping" />
+              </div>
+              
+              {/* Robot with blue tint when stuck */}
+              <EvilRobotIcon className="w-16 h-16 text-red-600 drop-shadow-[0_0_12px_rgba(59,130,246,0.9)]" />
+              
+              {/* Electric spark effects */}
+              <div className="absolute inset-0 w-16 h-16 pointer-events-none">
+                <svg viewBox="0 0 100 100" className="w-full h-full">
+                  {/* Lightning bolts */}
+                  <path d="M 50 20 L 45 35 L 52 35 L 48 50" stroke="#60a5fa" strokeWidth="2" fill="none" className="animate-pulse" />
+                  <path d="M 30 40 L 25 50 L 32 50 L 28 60" stroke="#93c5fd" strokeWidth="1.5" fill="none" className="animate-pulse" style={{ animationDelay: '0.2s' }} />
+                  <path d="M 70 40 L 65 50 L 72 50 L 68 60" stroke="#93c5fd" strokeWidth="1.5" fill="none" className="animate-pulse" style={{ animationDelay: '0.4s' }} />
+                </svg>
+              </div>
+              
+              {/* Stuck indicator text */}
+              <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-blue-400 whitespace-nowrap drop-shadow-[0_0_4px_rgba(59,130,246,1)]">
+                STUCK!
+              </div>
+            </div>
+          </>
+        ) : (
+          <EvilRobotIcon className="w-16 h-16 text-red-600 drop-shadow-[0_0_8px_rgba(220,38,38,0.8)]" />
+        )}
       </div>
     </div>
   );

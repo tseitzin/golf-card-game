@@ -49,6 +49,9 @@ export interface Robot {
   velocity: Velocity;
   targetFishId: number | null;
   speed: number;
+  isStuck: boolean;
+  stuckUntil: number;
+  stuckToObstacleId: number | null;
 }
 
 export interface Obstacle {
@@ -56,7 +59,7 @@ export interface Obstacle {
   position: Position;
   width: number;
   height: number;
-  type: 'seaweed' | 'island' | 'iceberg' | 'coral';
+  type: 'seaweed' | 'island' | 'iceberg' | 'coral' | 'magnet';
 }
 
 export interface GameState {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Pause, Play } from 'lucide-react';
-import type { GameConfig, GameState, Fish, WaterJet } from '../types';
+import type { GameConfig, GameState, Fish, WaterJet, Robot, Obstacle } from '../types';
 import { initializeFish, initializeRobots, initializeObstacles } from '../utils/gameInitializer';
 import { checkCollision, keepInBounds, resolveObstacleCollision, resolveRobotCollisions } from '../utils/physics';
 import { updateAIFish, updateRobot } from '../utils/ai';
@@ -208,6 +208,71 @@ export default function GameScreen({ config, onGameEnd }: GameScreenProps) {
       }));
 
       const updatedRobots = prevState.robots.map(robot => {
+        // If stuck time has expired, release the robot with a push
+        if (robot.isStuck && currentTime >= robot.stuckUntil) {
+          const magnetObstacle = prevState.obstacles.find(obs => obs.id === robot.stuckToObstacleId);
+          if (magnetObstacle) {
+            // Push robot away from magnet center
+            const magnetCenterX = magnetObstacle.position.x + magnetObstacle.width / 2;
+            const magnetCenterY = magnetObstacle.position.y + magnetObstacle.height / 2;
+            const dx = robot.position.x - magnetCenterX;
+            const dy = robot.position.y - magnetCenterY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            if (dist > 0) {
+              const pushStrength = 120;
+              const pushX = (dx / dist) * pushStrength;
+              const pushY = (dy / dist) * pushStrength;
+              
+              return {
+                ...robot,
+                position: {
+                  x: robot.position.x + pushX,
+                  y: robot.position.y + pushY,
+                },
+                velocity: {
+                  x: (dx / dist) * 3,
+                  y: (dy / dist) * 3,
+                },
+                isStuck: false,
+                stuckUntil: 0,
+                stuckToObstacleId: null,
+              };
+            }
+          }
+          // Fallback if magnet not found
+          return {
+            ...robot,
+            isStuck: false,
+            stuckUntil: 0,
+            stuckToObstacleId: null,
+          };
+        }
+
+        // Check if robot is stuck to a magnet
+        if (robot.isStuck && currentTime < robot.stuckUntil) {
+          // Keep robot stuck to side of magnet
+          const magnetObstacle = prevState.obstacles.find(obs => obs.id === robot.stuckToObstacleId);
+          if (magnetObstacle) {
+            // Position robot on the side of the magnet (left side by default)
+            // Add slight offset based on robot id so multiple robots don't overlap
+            const offsetY = (robot.id % 3 - 1) * 25; // Spread robots vertically
+            return {
+              ...robot,
+              position: {
+                x: magnetObstacle.position.x - 20, // Left side of magnet
+                y: magnetObstacle.position.y + magnetObstacle.height / 2 + offsetY,
+              },
+              velocity: { x: 0, y: 0 },
+            };
+          }
+        }
+
+        // Not stuck or being released - continue with normal robot logic
+        let isStuck = robot.isStuck;
+        let stuckUntil = robot.stuckUntil;
+        let stuckToObstacleId = robot.stuckToObstacleId;
+
         const frozenFish = updatedFish.filter(f => f.isFrozen);
         let robotPosition = robot.position;
 
@@ -262,11 +327,32 @@ export default function GameScreen({ config, onGameEnd }: GameScreenProps) {
           ARENA_HEIGHT
         );
 
+        // Check for magnet collision (only if not already stuck)
+        if (!isStuck) {
+          const magnetObstacles = prevState.obstacles.filter(obs => obs.type === 'magnet');
+          for (const magnet of magnetObstacles) {
+            const dx = boundedRobotPosition.x - (magnet.position.x + magnet.width / 2);
+            const dy = boundedRobotPosition.y - (magnet.position.y + magnet.height / 2);
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Check if robot is within magnet's attraction range (100px)
+            if (distance < 100) {
+              isStuck = true;
+              stuckUntil = currentTime + 10000; // Stick for 10 seconds
+              stuckToObstacleId = magnet.id;
+              break;
+            }
+          }
+        }
+
         return {
           ...robot,
           position: boundedRobotPosition,
           velocity: resolved.velocity,
           targetFishId: robotUpdate.targetFishId,
+          isStuck,
+          stuckUntil,
+          stuckToObstacleId,
         };
       });
 
@@ -279,6 +365,11 @@ export default function GameScreen({ config, onGameEnd }: GameScreenProps) {
       updatedFish.forEach(fish => {
         if (!fish.isFrozen) {
           for (const robot of updatedRobots) {
+            // Skip robots that are stuck to magnets - they can't freeze fish
+            if (robot.isStuck) {
+              continue;
+            }
+            
             if (checkCollision(fish.position, robot.position, 35)) {
               fish.isFrozen = true;
               fish.frozenUntil = currentTime + 5000;

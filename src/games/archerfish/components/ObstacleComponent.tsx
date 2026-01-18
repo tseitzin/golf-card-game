@@ -215,6 +215,91 @@ export default function ObstacleComponent({ obstacle }: ObstacleComponentProps) 
           </div>
         );
 
+      case 'magnet':
+        return (
+          <div
+            className="absolute"
+            style={{
+              left: `${obstacle.position.x}px`,
+              top: `${obstacle.position.y}px`,
+              width: `${obstacle.width}px`,
+              height: `${obstacle.height}px`,
+            }}
+          >
+            <svg
+              viewBox="0 0 100 80"
+              className="w-full h-full"
+              style={{ filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.3))' }}
+            >
+              <defs>
+                <linearGradient id="greyMagnetGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#b0b0b0" />
+                  <stop offset="50%" stopColor="#888888" />
+                  <stop offset="100%" stopColor="#b0b0b0" />
+                </linearGradient>
+                <linearGradient id="redTipGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#ff6b6b" />
+                  <stop offset="50%" stopColor="#ee4444" />
+                  <stop offset="100%" stopColor="#cc3333" />
+                </linearGradient>
+                <radialGradient id="magnetShine">
+                  <stop offset="0%" stopColor="#ffffff" opacity="0.5" />
+                  <stop offset="100%" stopColor="#ffffff" opacity="0" />
+                </radialGradient>
+              </defs>
+              
+              {/* Magnet shadow */}
+              <ellipse cx="50" cy="72" rx="45" ry="6" fill="#000" opacity="0.2" />
+              
+              {/* U-shaped magnet body (grey) */}
+              {/* Left arm */}
+              <rect x="15" y="15" width="18" height="50" rx="2" fill="url(#greyMagnetGradient)" stroke="#666" strokeWidth="1" />
+              
+              {/* Bottom connecting part */}
+              <rect x="15" y="55" width="52" height="18" rx="2" fill="url(#greyMagnetGradient)" stroke="#666" strokeWidth="1" />
+              
+              {/* Right arm */}
+              <rect x="67" y="15" width="18" height="50" rx="2" fill="url(#greyMagnetGradient)" stroke="#666" strokeWidth="1" />
+              
+              {/* Red tips on left end */}
+              <rect x="15" y="15" width="18" height="15" rx="2" fill="url(#redTipGradient)" />
+              <rect x="17" y="17" width="14" height="4" rx="1" fill="#ff8888" opacity="0.6" />
+              
+              {/* Red tips on right end */}
+              <rect x="67" y="15" width="18" height="15" rx="2" fill="url(#redTipGradient)" />
+              <rect x="69" y="17" width="14" height="4" rx="1" fill="#ff8888" opacity="0.6" />
+              
+              {/* Metallic highlights */}
+              <rect x="18" y="35" width="3" height="30" rx="1" fill="#fff" opacity="0.25" />
+              <rect x="70" y="35" width="3" height="30" rx="1" fill="#fff" opacity="0.25" />
+              <rect x="20" y="58" width="40" height="3" rx="1" fill="#fff" opacity="0.25" />
+              
+              {/* Magnetic field lines (decorative) */}
+              <path
+                d="M 33,10 Q 50,5 67,10"
+                fill="none"
+                stroke="#ff6b6b"
+                strokeWidth="1.5"
+                opacity="0.4"
+                strokeDasharray="3,2"
+              />
+              <path
+                d="M 30,5 Q 50,0 70,5"
+                fill="none"
+                stroke="#ff6b6b"
+                strokeWidth="1.5"
+                opacity="0.3"
+                strokeDasharray="3,2"
+              />
+              
+              {/* 3D depth effects */}
+              <rect x="15" y="15" width="18" height="2" rx="1" fill="#000" opacity="0.2" />
+              <rect x="67" y="15" width="18" height="2" rx="1" fill="#000" opacity="0.2" />
+              <rect x="15" y="71" width="52" height="2" rx="1" fill="#000" opacity="0.15" />
+            </svg>
+          </div>
+        );
+
       case 'coral':
         return (
           <div
