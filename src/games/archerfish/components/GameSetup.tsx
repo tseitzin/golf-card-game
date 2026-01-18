@@ -129,9 +129,16 @@ export default function GameSetup({ onStartGame }: GameSetupProps) {
   };
 
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = (seconds % 60).toFixed(1);
-    return `${mins}:${secs.padStart(4, '0')}`;
+    let mins = Math.floor(seconds / 60);
+    let secs = parseFloat((seconds % 60).toFixed(1));
+    
+    // Handle rounding edge case where seconds rounds to 60
+    if (secs >= 60) {
+      mins += 1;
+      secs = 0;
+    }
+    
+    return `${mins}:${secs.toFixed(1).padStart(4, '0')}`;
   };
 
   return (

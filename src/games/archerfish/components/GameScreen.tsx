@@ -352,9 +352,16 @@ export default function GameScreen({ config, onGameEnd }: GameScreenProps) {
   }, [gameLoop]);
 
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = (seconds % 60).toFixed(1);
-    return `${mins}:${secs.padStart(4, '0')}`;
+    let mins = Math.floor(seconds / 60);
+    let secs = parseFloat((seconds % 60).toFixed(1));
+    
+    // Handle rounding edge case where seconds rounds to 60
+    if (secs >= 60) {
+      mins += 1;
+      secs = 0;
+    }
+    
+    return `${mins}:${secs.toFixed(1).padStart(4, '0')}`;
   };
 
   return (
@@ -362,7 +369,7 @@ export default function GameScreen({ config, onGameEnd }: GameScreenProps) {
       <div className="w-full max-w-7xl">
         <div className="bg-white rounded-t-2xl p-4 shadow-lg flex justify-between items-center">
           <div className="flex gap-6">
-            {gameState.fish.map(fish => (
+            {[...gameState.fish].sort((a, b) => b.survivalTime - a.survivalTime).map(fish => (
               <div key={fish.id} className="text-sm">
                 <span className="font-bold" style={{ color: fish.color }}>
                   {fish.name}:

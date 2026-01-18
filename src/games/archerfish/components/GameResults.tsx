@@ -50,9 +50,16 @@ export default function GameResults({ fish, config, onPlayAgain }: GameResultsPr
   };
 
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = (seconds % 60).toFixed(1);
-    return `${mins}:${secs.padStart(4, '0')}`;
+    let mins = Math.floor(seconds / 60);
+    let secs = parseFloat((seconds % 60).toFixed(1));
+    
+    // Handle rounding edge case where seconds rounds to 60
+    if (secs >= 60) {
+      mins += 1;
+      secs = 0;
+    }
+    
+    return `${mins}:${secs.toFixed(1).padStart(4, '0')}`;
   };
 
   const getMedalEmoji = (index: number) => {
@@ -63,6 +70,19 @@ export default function GameResults({ fish, config, onPlayAgain }: GameResultsPr
         return '🥈';
       case 2:
         return '🥉';
+      default:
+        return '';
+    }
+  };
+
+  const getPlacementText = (index: number) => {
+    switch (index) {
+      case 0:
+        return '1st Place';
+      case 1:
+        return '2nd Place';
+      case 2:
+        return '3rd Place';
       default:
         return '';
     }
@@ -103,7 +123,14 @@ export default function GameResults({ fish, config, onPlayAgain }: GameResultsPr
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-3xl">{getMedalEmoji(index)}</span>
+                    <div className="flex flex-col items-center">
+                      <span className="text-6xl">{getMedalEmoji(index)}</span>
+                      {getPlacementText(index) && (
+                        <span className="text-xs font-semibold text-gray-700 mt-1">
+                          {getPlacementText(index)}
+                        </span>
+                      )}
+                    </div>
                     <div>
                       <div className="font-bold text-gray-800" style={{ color: f.color }}>
                         {f.name}
