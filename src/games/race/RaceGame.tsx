@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { GameState, RaceConfig, Car, PlayerInputs, CarConfig } from '../../../types/race';
+import { GameState, RaceConfig, Car, PlayerInputs, CarConfig, TrackType } from '../../types/race';
 import { CAR_COLORS, KEYBOARD_CONTROLS } from '../../constants/race/index.ts';
 import { createCar } from './game/GameEngine';
 import { SetupScreen } from './components/SetupScreen';
@@ -18,6 +18,7 @@ const getInitialConfig = (): RaceConfig => ({
 	playerConfigs: [
 		{ color: CAR_COLORS[0].value, number: 1, style: 0 },
 	],
+	trackType: TrackType.Oval,
 });
 
 export default function RaceGame() {
@@ -39,23 +40,31 @@ export default function RaceGame() {
 			updateKeyboardInputs();
 		};
 
-		const updateKeyboardInputs = () => {
-			const inputs: PlayerInputs = {};
-			for (let i = 0; i < raceConfig.humanPlayers; i++) {
-				const controls = KEYBOARD_CONTROLS[i];
-				if (controls) {
-					const hasAccelerate = pressedKeysRef.current.has(controls.accelerate);
-					const hasAlternate = 'alternate' in controls && pressedKeysRef.current.has(controls.alternate as string);
-					inputs[i] = {
-						accelerate: hasAccelerate || hasAlternate,
-						brake: pressedKeysRef.current.has(controls.brake),
-						turnLeft: pressedKeysRef.current.has(controls.turnLeft),
-						turnRight: pressedKeysRef.current.has(controls.turnRight),
-					};
-				}
+	const updateKeyboardInputs = () => {
+		const inputs: PlayerInputs = {};
+		for (let i = 0; i < raceConfig.humanPlayers; i++) {
+			const controls = KEYBOARD_CONTROLS[i];
+			if (controls) {
+				const hasAccelerate = pressedKeysRef.current.has(controls.accelerate);
+				const hasAlternate = 'alternate' in controls && pressedKeysRef.current.has(controls.alternate as string);
+				
+				// For player 0, also check arrow keys in addition to WASD
+				const arrowControls = i === 0 ? KEYBOARD_CONTROLS[1] : null;
+				const hasArrowAccelerate = arrowControls && pressedKeysRef.current.has(arrowControls.accelerate);
+				const hasArrowBrake = arrowControls && pressedKeysRef.current.has(arrowControls.brake);
+				const hasArrowLeft = arrowControls && pressedKeysRef.current.has(arrowControls.turnLeft);
+				const hasArrowRight = arrowControls && pressedKeysRef.current.has(arrowControls.turnRight);
+				
+				inputs[i] = {
+					accelerate: hasAccelerate || hasAlternate || hasArrowAccelerate,
+					brake: pressedKeysRef.current.has(controls.brake) || hasArrowBrake,
+					turnLeft: pressedKeysRef.current.has(controls.turnLeft) || hasArrowLeft,
+					turnRight: pressedKeysRef.current.has(controls.turnRight) || hasArrowRight,
+				};
 			}
-			keyboardInputsRef.current = inputs;
-		};
+		}
+		keyboardInputsRef.current = inputs;
+	};
 
 		window.addEventListener('keydown', handleKeyDown);
 		window.addEventListener('keyup', handleKeyUp);
@@ -209,12 +218,13 @@ export default function RaceGame() {
 				cars={cars}
 				isRacing={gameState === 'racing'}
 				targetLaps={raceConfig.laps}
+				trackType={raceConfig.trackType}
 				playerInputs={getCombinedInputs()}
 				onCarsUpdate={handleCarsUpdate}
 				onRaceFinished={handleRaceFinished}
 			/>
 
-			<RaceHUD cars={cars} targetLaps={raceConfig.laps} />
+		<RaceHUD cars={cars} targetLaps={raceConfig.laps} trackType={raceConfig.trackType} />
 
 			{gameState !== 'finished' && (
 				<TouchControls

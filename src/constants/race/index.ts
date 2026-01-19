@@ -33,9 +33,11 @@ export const CAR_PHYSICS = {
   coastDeceleration: 0.00000075,
   aiSpeedFactor: 0.95,
   aiSpeedVariation: 0.000025,
-  turnSpeed: 0.25,
-  maxTurnAngle: 0.3,
+  turnSpeed: 0.6,
+  maxTurnAngle: 0.5,
   laneWidth: 30,
+  headingTurnRate: 0.003,
+  maxLaneOffsetMultiplier: 3.5,
 };
 
 export const TRACK_CONFIG = {

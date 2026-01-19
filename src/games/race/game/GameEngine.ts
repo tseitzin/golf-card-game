@@ -1,5 +1,5 @@
 import { Car, CarConfig, PlayerInputs } from '../../../types/race';
-import { CAR_PHYSICS } from '../../../constants/race/index.ts';
+import { CAR_PHYSICS } from '../../../constants/race';
 
 export function createCar(config: CarConfig, lane: number, isAI: boolean): Car {
   const speedVariation = (Math.random() - 0.5) * CAR_PHYSICS.speedVariation * 2;
@@ -18,6 +18,7 @@ export function createCar(config: CarConfig, lane: number, isAI: boolean): Car {
     lastCheckpoint: 0,
     finished: false,
     steeringAngle: 0,
+    heading: 0,
   };
 }
 
@@ -42,16 +43,23 @@ export function updateCar(
 
   let newLaneOffset = car.laneOffset;
   let newSteeringAngle = car.steeringAngle;
+  let newHeading = car.heading;
 
   const steeringSpeed = 0.008;
   const steeringDamping = 0.9;
+  
+  // Speed-dependent steering: slower = sharper turns
+  const speedFactor = Math.max(0.3, newSpeed / car.maxSpeed);
+  const effectiveTurnRate = CAR_PHYSICS.headingTurnRate / speedFactor;
 
   if (input.turnLeft) {
     newLaneOffset -= CAR_PHYSICS.turnSpeed * deltaTime;
     newSteeringAngle = Math.max(newSteeringAngle - steeringSpeed * deltaTime, -CAR_PHYSICS.maxTurnAngle);
+    newHeading -= effectiveTurnRate * deltaTime;
   } else if (input.turnRight) {
     newLaneOffset += CAR_PHYSICS.turnSpeed * deltaTime;
     newSteeringAngle = Math.min(newSteeringAngle + steeringSpeed * deltaTime, CAR_PHYSICS.maxTurnAngle);
+    newHeading += effectiveTurnRate * deltaTime;
   } else {
     newSteeringAngle *= Math.pow(steeringDamping, deltaTime / 16);
     if (Math.abs(newSteeringAngle) < 0.001) {
@@ -59,7 +67,10 @@ export function updateCar(
     }
   }
 
-  const maxLaneOffset = CAR_PHYSICS.laneWidth * 2.5;
+  // Normalize heading to 0-2π range
+  newHeading = ((newHeading % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+
+  const maxLaneOffset = CAR_PHYSICS.laneWidth * CAR_PHYSICS.maxLaneOffsetMultiplier;
   newLaneOffset = Math.max(-maxLaneOffset, Math.min(maxLaneOffset, newLaneOffset));
 
   let newProgress = car.trackProgress + newSpeed * deltaTime;
@@ -88,6 +99,7 @@ export function updateCar(
     lapsCompleted: newLaps,
     lastCheckpoint: newCheckpoint,
     steeringAngle: newSteeringAngle,
+    heading: newHeading,
   };
 }
 

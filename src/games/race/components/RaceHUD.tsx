@@ -1,14 +1,15 @@
-import { Car } from '../../../types/race';
+import { Car, TrackType } from '../../../types/race';
 
 interface RaceHUDProps {
 	cars: Car[];
 	targetLaps: number;
+	trackType: TrackType;
 }
 
 const POSITION_COLORS = ['#FFD700', '#C0C0C0', '#CD7F32'];
 const POSITION_LABELS = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'];
 
-export function RaceHUD({ cars, targetLaps }: RaceHUDProps) {
+export function RaceHUD({ cars, targetLaps, trackType }: RaceHUDProps) {
 	const sortedCars = [...cars].sort((a, b) => {
 		if (a.finished && b.finished) {
 			return (a.finishPosition || 0) - (b.finishPosition || 0);
@@ -19,11 +20,26 @@ export function RaceHUD({ cars, targetLaps }: RaceHUDProps) {
 		if (b.lapsCompleted !== a.lapsCompleted) {
 			return b.lapsCompleted - a.lapsCompleted;
 		}
-		return b.trackProgress - a.trackProgress;
+	return b.trackProgress - a.trackProgress;
 	});
 
+	// Position scoreboard based on track type
+	const getPositionClasses = () => {
+		switch (trackType) {
+			case TrackType.Figure8:
+				// For Figure-8, place at top to avoid crossing point
+				return 'absolute top-4 left-1/2 -translate-x-1/2';
+			case TrackType.RoadCourse:
+				// For complex tracks, place at top right
+				return 'absolute top-4 right-4';
+			default:
+				// For Oval and Speedway, center is fine (infield area)
+				return 'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2';
+		}
+	};
+
 	return (
-		<div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/60 rounded-lg px-3 py-1.5 backdrop-blur-sm">
+		<div className={`${getPositionClasses()} bg-black/60 rounded-lg px-3 py-1.5 backdrop-blur-sm`}>
 			<div className="flex gap-2 flex-wrap justify-center max-w-5xl">
 				{sortedCars.map((car, index) => (
 					<div
