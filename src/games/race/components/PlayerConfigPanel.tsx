@@ -96,10 +96,12 @@ export function PlayerConfigPanel({
 							className={`w-16 px-2 py-1 rounded border-2 text-center font-bold text-lg ${
 								isNumberUsed ? 'border-red-500 bg-red-50' : 'border-gray-300'
 							}`}
+							aria-label="Track Number"
 						/>
 						{isNumberUsed && (
-							<span className="text-xs text-red-500 ml-2">In use</span>
+							<span className="text-xs text-red-500 ml-2">Track number in use</span>
 						)}
+						<span className="block text-xs text-gray-500 mt-1">Select your track number (1-99).</span>
 					</div>
 				</div>
 			</div>
