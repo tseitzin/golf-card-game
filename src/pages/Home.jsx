@@ -42,6 +42,14 @@ const games = [
     emoji: '🐠',
     color: '#0EA5E9',
   },
+  {
+    id: 'battleplanes',
+    name: 'Battle Planes',
+    description: 'Defend the skies! Shoot down enemy fighter jets with lightning power!',
+    path: '/battleplanes',
+    emoji: '✈️',
+    color: '#0EA5E9',
+  },
 ]
 
 export default function Home() {
