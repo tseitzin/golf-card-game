@@ -52,8 +52,8 @@ export default function GameScreen({ config, onExit }: GameScreenProps) {
   const initializePlanes = useCallback(() => {
     const planes: PlaneType[] = [];
     const varietiesCount = getPlaneVarietiesCount();
-    const baseWidth = 80 * multiplier.size;
-    const baseHeight = 32 * multiplier.size;
+    const baseWidth = 120 * multiplier.size;
+    const baseHeight = 48 * multiplier.size;
     const baseSpeed = 2 * multiplier.speed;
 
     for (let i = 0; i < config.planeCount; i++) {
