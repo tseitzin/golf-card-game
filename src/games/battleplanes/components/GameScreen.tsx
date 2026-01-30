@@ -121,13 +121,13 @@ export default function GameScreen({ config, onExit }: GameScreenProps) {
 
           if (plane.direction === 'right') {
             newX += plane.speed;
-            if (newX > window.innerWidth + 100) {
-              newX = -100;
+            if (newX > window.innerWidth) {
+              newX = -plane.width;
             }
           } else {
             newX -= plane.speed;
-            if (newX < -100) {
-              newX = window.innerWidth + 100;
+            if (newX < -plane.width) {
+              newX = window.innerWidth;
             }
           }
 

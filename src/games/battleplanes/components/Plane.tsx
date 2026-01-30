@@ -13,7 +13,7 @@ export default function Plane({ plane }: PlaneProps) {
 
   return (
     <div
-      className="absolute transition-all duration-100"
+      className="absolute"
       style={{
         left: `${x}px`,
         top: `${y}px`,
