@@ -175,16 +175,14 @@ export default function GameScreen({ config, onExit }: GameScreenProps) {
     if (!gameContainerRef.current) return;
 
     const containerRect = gameContainerRef.current.getBoundingClientRect();
-    const lightningHeight = 600; // Match the actual lightning SVG height
-    const weaponCenterX = containerRect.width / 2 - 3; // Account for -ml-[3px] offset
-    // Tighter collision detection to match actual lightning bolt width
+    const bottomOffset = 160;
+    const lightningHeight = Math.max(containerRect.height - bottomOffset, 600);
+    const weaponCenterX = containerRect.width / 2 - 3;
     const collisionWidth = 22;
     const weaponLeft = weaponCenterX - collisionWidth / 2;
     const weaponRight = weaponCenterX + collisionWidth / 2;
-    // Lightning starts 160px from bottom and extends 600px upward
-    const lightningBottom = containerRect.height - 160;
+    const lightningBottom = containerRect.height - bottomOffset;
     const rawLightningTop = lightningBottom - lightningHeight;
-    // CRITICAL FIX: Limit collision detection to visible screen area only
     const lightningTop = Math.max(0, rawLightningTop);
 
     setGameState((prev) => {

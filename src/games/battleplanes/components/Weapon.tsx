@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Zap } from 'lucide-react';
 
 interface WeaponProps {
@@ -8,11 +8,49 @@ interface WeaponProps {
 }
 
 export default function Weapon({ recharging, lightningActive, rechargeProgress }: WeaponProps) {
+  const [lightningHeight, setLightningHeight] = useState(600);
+
+  useEffect(() => {
+    const updateLightningHeight = () => {
+      const bottomOffset = 160;
+      const height = window.innerHeight - bottomOffset;
+      setLightningHeight(Math.max(height, 600));
+    };
+
+    updateLightningHeight();
+    window.addEventListener('resize', updateLightningHeight);
+    return () => window.removeEventListener('resize', updateLightningHeight);
+  }, []);
+
+  const scalePath = (path: string, originalHeight: number, newHeight: number) => {
+    const scale = newHeight / originalHeight;
+    return path.replace(/(\d+\.?\d*)/g, (match, number) => {
+      const num = parseFloat(number);
+      const isYCoordinate = path.indexOf(match) > 0 && path[path.indexOf(match) - 1] === ' ';
+      return isYCoordinate ? (num * scale).toFixed(1) : match;
+    });
+  };
+
+  const originalHeight = 600;
+  const mainPath = scalePath(
+    "M 25 0 L 23 85 L 30 85 L 26 145 L 32 145 L 28 210 L 34 210 L 29 275 L 36 275 L 31 340 L 38 340 L 33 405 L 40 405 L 34 470 L 42 470 L 25 550 L 26 460 L 20 460 L 24 395 L 18 395 L 22 330 L 15 330 L 20 265 L 14 265 L 19 200 L 13 200 L 18 135 L 12 135 L 17 85 L 10 85 Z",
+    originalHeight,
+    lightningHeight
+  );
+  const corePath = scalePath(
+    "M 25 0 L 23 85 L 26 145 L 28 210 L 29 275 L 31 340 L 33 405 L 34 470 L 25 550",
+    originalHeight,
+    lightningHeight
+  );
+  const branch1 = scalePath("M 28 150 L 12 165 L 15 175", originalHeight, lightningHeight);
+  const branch2 = scalePath("M 22 280 L 8 295 L 10 305", originalHeight, lightningHeight);
+  const branch3 = scalePath("M 32 420 L 42 435 L 40 445", originalHeight, lightningHeight);
+
   return (
     <div className="fixed bottom-0 left-1/2 -translate-x-1/2 z-20">
       {lightningActive && (
         <div className="absolute bottom-[160px] left-1/2 -translate-x-1/2 -ml-[3px]">
-          <svg width="50" height="600" viewBox="0 0 50 600" className="animate-pulse" style={{ filter: 'drop-shadow(0 0 15px rgba(59, 130, 246, 0.9)) drop-shadow(0 0 30px rgba(147, 197, 253, 0.6))' }}>
+          <svg width="50" height={lightningHeight} viewBox={`0 0 50 ${lightningHeight}`} className="animate-pulse" style={{ filter: 'drop-shadow(0 0 15px rgba(59, 130, 246, 0.9)) drop-shadow(0 0 30px rgba(147, 197, 253, 0.6))' }}>
             <defs>
               <linearGradient id="lightningGradient" x1="0%" y1="0%" x2="0%" y2="100%">
                 <stop offset="0%" stopColor="#93c5fd" stopOpacity="1" />
@@ -38,7 +76,7 @@ export default function Weapon({ recharging, lightningActive, rechargeProgress }
 
             {/* Secondary branch effects */}
             <path
-              d="M 28 150 L 12 165 L 15 175"
+              d={branch1}
               stroke="url(#lightningGradient)"
               strokeWidth="1.5"
               fill="none"
@@ -46,7 +84,7 @@ export default function Weapon({ recharging, lightningActive, rechargeProgress }
               filter="url(#glow)"
             />
             <path
-              d="M 22 280 L 8 295 L 10 305"
+              d={branch2}
               stroke="url(#lightningGradient)"
               strokeWidth="1.5"
               fill="none"
@@ -54,7 +92,7 @@ export default function Weapon({ recharging, lightningActive, rechargeProgress }
               filter="url(#glow)"
             />
             <path
-              d="M 32 420 L 42 435 L 40 445"
+              d={branch3}
               stroke="url(#lightningGradient)"
               strokeWidth="1.5"
               fill="none"
@@ -64,7 +102,7 @@ export default function Weapon({ recharging, lightningActive, rechargeProgress }
 
             {/* Main lightning bolt - more jagged and realistic */}
             <path
-              d="M 25 0 L 23 85 L 30 85 L 26 145 L 32 145 L 28 210 L 34 210 L 29 275 L 36 275 L 31 340 L 38 340 L 33 405 L 40 405 L 34 470 L 42 470 L 25 550 L 26 460 L 20 460 L 24 395 L 18 395 L 22 330 L 15 330 L 20 265 L 14 265 L 19 200 L 13 200 L 18 135 L 12 135 L 17 85 L 10 85 Z"
+              d={mainPath}
               fill="url(#lightningGradient)"
               filter="url(#glow)"
               className="animate-pulse"
@@ -73,7 +111,7 @@ export default function Weapon({ recharging, lightningActive, rechargeProgress }
 
             {/* Bright core highlight */}
             <path
-              d="M 25 0 L 23 85 L 26 145 L 28 210 L 29 275 L 31 340 L 33 405 L 34 470 L 25 550"
+              d={corePath}
               stroke="#ffffff"
               strokeWidth="1.5"
               fill="none"
@@ -85,7 +123,7 @@ export default function Weapon({ recharging, lightningActive, rechargeProgress }
 
             {/* Additional energy crackle */}
             <path
-              d="M 25 0 L 23 85 L 26 145 L 28 210 L 29 275 L 31 340 L 33 405 L 34 470 L 25 550"
+              d={corePath}
               stroke="#60a5fa"
               strokeWidth="4"
               fill="none"
