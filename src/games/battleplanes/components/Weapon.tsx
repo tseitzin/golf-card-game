@@ -11,39 +11,86 @@ export default function Weapon({ recharging, lightningActive, rechargeProgress }
   return (
     <div className="fixed bottom-0 left-1/2 -translate-x-1/2 z-20">
       {lightningActive && (
-        <div className="absolute bottom-[160px] left-1/2 -translate-x-1/2">
-          <svg width="80" height="600" viewBox="0 0 80 600" className="animate-pulse" style={{ filter: 'drop-shadow(0 0 12px rgba(59, 130, 246, 0.8))' }}>
+        <div className="absolute bottom-[160px] left-1/2 -translate-x-1/2 -ml-[3px]">
+          <svg width="50" height="600" viewBox="0 0 50 600" className="animate-pulse" style={{ filter: 'drop-shadow(0 0 15px rgba(59, 130, 246, 0.9)) drop-shadow(0 0 30px rgba(147, 197, 253, 0.6))' }}>
             <defs>
               <linearGradient id="lightningGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#60a5fa" stopOpacity="0.9" />
-                <stop offset="50%" stopColor="#22d3ee" stopOpacity="1" />
-                <stop offset="100%" stopColor="#fef08a" stopOpacity="0.9" />
+                <stop offset="0%" stopColor="#93c5fd" stopOpacity="1" />
+                <stop offset="30%" stopColor="#3b82f6" stopOpacity="1" />
+                <stop offset="60%" stopColor="#06b6d4" stopOpacity="1" />
+                <stop offset="100%" stopColor="#fef08a" stopOpacity="0.95" />
               </linearGradient>
               <filter id="glow">
-                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
                 <feMerge>
                   <feMergeNode in="coloredBlur"/>
                   <feMergeNode in="SourceGraphic"/>
                 </feMerge>
               </filter>
+              <filter id="innerGlow">
+                <feGaussianBlur stdDeviation="1" result="blur"/>
+                <feMerge>
+                  <feMergeNode in="blur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
             </defs>
 
+            {/* Secondary branch effects */}
             <path
-              d="M 40 0 L 35 100 L 45 100 L 38 200 L 50 200 L 42 300 L 52 300 L 44 400 L 55 400 L 40 550 L 35 400 L 25 400 L 32 300 L 22 300 L 30 200 L 20 200 L 28 100 L 18 100 Z"
+              d="M 28 150 L 12 165 L 15 175"
+              stroke="url(#lightningGradient)"
+              strokeWidth="1.5"
+              fill="none"
+              opacity="0.7"
+              filter="url(#glow)"
+            />
+            <path
+              d="M 22 280 L 8 295 L 10 305"
+              stroke="url(#lightningGradient)"
+              strokeWidth="1.5"
+              fill="none"
+              opacity="0.7"
+              filter="url(#glow)"
+            />
+            <path
+              d="M 32 420 L 42 435 L 40 445"
+              stroke="url(#lightningGradient)"
+              strokeWidth="1.5"
+              fill="none"
+              opacity="0.7"
+              filter="url(#glow)"
+            />
+
+            {/* Main lightning bolt - more jagged and realistic */}
+            <path
+              d="M 25 0 L 23 85 L 30 85 L 26 145 L 32 145 L 28 210 L 34 210 L 29 275 L 36 275 L 31 340 L 38 340 L 33 405 L 40 405 L 34 470 L 42 470 L 25 550 L 26 460 L 20 460 L 24 395 L 18 395 L 22 330 L 15 330 L 20 265 L 14 265 L 19 200 L 13 200 L 18 135 L 12 135 L 17 85 L 10 85 Z"
               fill="url(#lightningGradient)"
               filter="url(#glow)"
               className="animate-pulse"
-              style={{ animationDuration: '150ms' }}
+              style={{ animationDuration: '120ms' }}
             />
 
+            {/* Bright core highlight */}
             <path
-              d="M 40 0 L 35 100 L 45 100 L 38 200 L 50 200 L 42 300 L 52 300 L 44 400 L 55 400 L 40 550"
+              d="M 25 0 L 23 85 L 26 145 L 28 210 L 29 275 L 31 340 L 33 405 L 34 470 L 25 550"
               stroke="#ffffff"
-              strokeWidth="2"
+              strokeWidth="1.5"
               fill="none"
-              opacity="0.6"
+              opacity="0.8"
+              filter="url(#innerGlow)"
               className="animate-pulse"
-              style={{ animationDuration: '100ms' }}
+              style={{ animationDuration: '80ms' }}
+            />
+
+            {/* Additional energy crackle */}
+            <path
+              d="M 25 0 L 23 85 L 26 145 L 28 210 L 29 275 L 31 340 L 33 405 L 34 470 L 25 550"
+              stroke="#60a5fa"
+              strokeWidth="4"
+              fill="none"
+              opacity="0.3"
+              filter="url(#glow)"
             />
           </svg>
 
@@ -70,7 +117,7 @@ export default function Weapon({ recharging, lightningActive, rechargeProgress }
         </div>
 
         {recharging && (
-          <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-32">
+          <div className="absolute top-8 left-1/2 -translate-x-1/2 w-32">
             <div className="bg-slate-800 rounded-full p-2 border border-slate-600 shadow-lg">
               <div className="relative h-2 bg-slate-700 rounded-full overflow-hidden">
                 <div
@@ -85,11 +132,6 @@ export default function Weapon({ recharging, lightningActive, rechargeProgress }
           </div>
         )}
 
-        {!recharging && !lightningActive && (
-          <div className="absolute -top-16 left-1/2 -translate-x-1/2 text-green-400 text-sm font-bold bg-slate-800 px-3 py-1 rounded-full border border-green-500 shadow-lg animate-pulse">
-            READY
-          </div>
-        )}
       </div>
 
       <div className="w-24 h-4 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 border-t-2 border-slate-600"></div>

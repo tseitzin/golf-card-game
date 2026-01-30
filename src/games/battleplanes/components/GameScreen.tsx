@@ -29,9 +29,11 @@ export default function GameScreen({ config, onExit }: GameScreenProps) {
   const [rechargeProgress, setRechargeProgress] = useState(100);
   const [gameOver, setGameOver] = useState(false);
   const [explosions, setExplosions] = useState<ExplosionData[]>([]);
+  const gameContainerRef = useRef<HTMLDivElement>(null);
   const weaponXRef = useRef(0);
   const rechargeStartRef = useRef(0);
   const hasSeenPlanesRef = useRef(false);
+  const gameStartTimeRef = useRef(Date.now());
 
   const difficultyMultipliers = {
     easy: { speed: 0.7, size: 1.2 },
@@ -170,10 +172,20 @@ export default function GameScreen({ config, onExit }: GameScreenProps) {
   }, [gameState.lightningActive]);
 
   const checkCollision = useCallback(() => {
-    const weaponWidth = 80;
-    const weaponCenterX = window.innerWidth / 2;
-    const weaponLeft = weaponCenterX - weaponWidth / 2;
-    const weaponRight = weaponCenterX + weaponWidth / 2;
+    if (!gameContainerRef.current) return;
+
+    const containerRect = gameContainerRef.current.getBoundingClientRect();
+    const lightningHeight = 600; // Match the actual lightning SVG height
+    const weaponCenterX = containerRect.width / 2 - 3; // Account for -ml-[3px] offset
+    // Tighter collision detection to match actual lightning bolt width
+    const collisionWidth = 22;
+    const weaponLeft = weaponCenterX - collisionWidth / 2;
+    const weaponRight = weaponCenterX + collisionWidth / 2;
+    // Lightning starts 160px from bottom and extends 600px upward
+    const lightningBottom = containerRect.height - 160;
+    const rawLightningTop = lightningBottom - lightningHeight;
+    // CRITICAL FIX: Limit collision detection to visible screen area only
+    const lightningTop = Math.max(0, rawLightningTop);
 
     setGameState((prev) => {
       let hitPlanes: PlaneType[] = [];
@@ -181,13 +193,17 @@ export default function GameScreen({ config, onExit }: GameScreenProps) {
       prev.planes.forEach((plane) => {
         const planeLeft = plane.x;
         const planeRight = plane.x + plane.width;
-        const planeCenterX = plane.x + plane.width / 2;
+        const planeTop = plane.y;
+        const planeBottom = plane.y + plane.height;
 
-        if (
-          planeCenterX >= weaponLeft &&
-          planeCenterX <= weaponRight &&
-          plane.y < window.innerHeight - 100
-        ) {
+        // Standard AABB collision: check if rectangles overlap
+        const horizontalOverlap =
+          planeRight > weaponLeft && planeLeft < weaponRight;
+
+        const verticalOverlap =
+          planeBottom > lightningTop && planeTop < lightningBottom;
+
+        if (horizontalOverlap && verticalOverlap) {
           hitPlanes.push(plane);
         }
       });
@@ -220,6 +236,9 @@ export default function GameScreen({ config, onExit }: GameScreenProps) {
 
   const fireLightning = useCallback(() => {
     if (gameState.weaponRecharging || !gameState.isPlaying) return;
+
+    const timeSinceStart = Date.now() - gameStartTimeRef.current;
+    if (timeSinceStart < 300) return;
 
     setGameState((prev) => ({
       ...prev,
@@ -281,7 +300,7 @@ export default function GameScreen({ config, onExit }: GameScreenProps) {
   }
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-gradient-to-b from-sky-300 via-sky-200 to-green-200">
+    <div ref={gameContainerRef} className="relative w-full h-screen overflow-hidden bg-gradient-to-b from-sky-300 via-sky-200 to-green-200">
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-sky-100/50 to-green-100/50"></div>
 
       <div className="absolute top-4 left-4 right-4 flex justify-between items-start z-10">
